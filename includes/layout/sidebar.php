@@ -140,14 +140,14 @@ $admin_active = in_array($active_menu, [
               <li class="nav-item">
                 <a href="<?php echo ASSET_BASE; ?>public/admin_org_unidades.php"
                   class="nav-link <?php echo is_active('admin_org_unidades', $active_menu); ?>">
-                  Unidades (Deptos)
+                  Áras
                 </a>
               </li>
 
               <li class="nav-item">
                 <a href="<?php echo ASSET_BASE; ?>public/admin_org_adscripciones.php"
                   class="nav-link <?php echo is_active('admin_org_adscripciones', $active_menu); ?>">
-                  Adscripciones (Subáreas)
+                  Adscripciones
                 </a>
               </li>
 
@@ -161,7 +161,7 @@ $admin_active = in_array($active_menu, [
               <li class="nav-item">
                 <a href="<?php echo ASSET_BASE; ?>public/admin_org_centros_trabajo.php"
                   class="nav-link <?php echo is_active('admin_org_centros_trabajo', $active_menu); ?>">
-                  Centros de trabajo
+                  Ubicaciones
                 </a>
               </li>
               <?php endif; ?>

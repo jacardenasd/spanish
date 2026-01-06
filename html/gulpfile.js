@@ -75,7 +75,7 @@ const processors = [
 // the paths are correct if you need to use a custom assets location
 function sass() {
     if(direction == 'LTR') {
-        return src('global_assets/scss/layouts/' + layout + '/' + theme + '/compile/*.scss')
+        return src('../global_assets/scss/layouts/' + layout + '/' + theme + '/compile/*.scss')
             .pipe(compileSass().on('error', compileSass.logError))
             .pipe(postcss(processors))
             .pipe(dest(layout + '/' + direction + '/' + theme + '/' + type + '/assets/css'))
@@ -90,7 +90,7 @@ function sass() {
             .pipe(dest(layout + '/' + direction + '/' + theme + '/' + type + '/assets/css'));
     }
     else {
-        return src('global_assets/scss/layouts/' + layout + '/' + theme + '/compile/*.scss')
+        return src('../global_assets/scss/layouts/' + layout + '/' + theme + '/compile/*.scss')
             .pipe(compileSass().on('error', compileSass.logError))
             .pipe(postcss(processors))
             .pipe(dest(layout + '/' + direction + '/' + theme + '/' + type + '/assets/css'))
@@ -110,7 +110,7 @@ function sass() {
 
 // Icons
 function icons() {
-    return src('global_assets/scss/shared/icons/' + iconset + '/compile/*.scss')
+    return src('../global_assets/scss/shared/icons/' + iconset + '/compile/*.scss')
         .pipe(compileSass().on('error', compileSass.logError))
         .pipe(postcss(processors))
         .pipe(minifyCss({
@@ -119,29 +119,29 @@ function icons() {
         .pipe(rename({
             suffix: ".min"
         }))
-        .pipe(dest('global_assets/css/icons/' + iconset));
+        .pipe(dest('../global_assets/css/icons/' + iconset));
 }
 
 // CKEditor
 function ckeditor() {
     if (direction == 'LTR') {
-        return src('global_assets/scss/layouts/' + layout + '/' + theme + '/compile/ckeditor/*.scss')
+        return src('../global_assets/scss/layouts/' + layout + '/' + theme + '/compile/ckeditor/*.scss')
             .pipe(compileSass().on('error', compileSass.logError))
             .pipe(postcss(processors))
             .pipe(minifyCss({
                 level: { 1: { specialComments: 0 } }
             }))
-            .pipe(dest('global_assets/js/plugins/editors/ckeditor/skins/' + theme + '/'));
+            .pipe(dest('../global_assets/js/plugins/editors/ckeditor/skins/' + theme + '/'));
     }
     else {
-        return src('global_assets/scss/layouts/' + layout + '/' + theme + '/compile/ckeditor/*.scss')
+        return src('../global_assets/scss/layouts/' + layout + '/' + theme + '/compile/ckeditor/*.scss')
             .pipe(compileSass().on('error', compileSass.logError))
             .pipe(postcss(processors))
             .pipe(rtlcss())
             .pipe(minifyCss({
                 level: { 1: { specialComments: 0 } }
             }))
-            .pipe(dest('global_assets/js/plugins/editors/ckeditor/skins/' + theme + '_' + direction.toLowerCase() + '/'));
+            .pipe(dest('../global_assets/js/plugins/editors/ckeditor/skins/' + theme + '_' + direction.toLowerCase() + '/'));
     }
 }
 
@@ -151,7 +151,7 @@ function ckeditor() {
 //
 
 function watchFiles() {
-    return watch('global_assets/scss/**/*.scss', series(sass));
+    return watch('../global_assets/scss/**/*.scss', series(sass));
 }
 
 

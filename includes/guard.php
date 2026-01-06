@@ -20,7 +20,11 @@ function require_empresa() {
 
 function require_password_change_redirect() {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    if (!empty($_SESSION['debe_cambiar_pass']) && basename($_SERVER['PHP_SELF']) !== 'cambiar_password.php') {
+
+    $self = basename($_SERVER['PHP_SELF']);
+    $permitidos = ['cambiar_password.php', 'logout.php', 'recuperar_contrasena.php', 'terminos.php', 'login.php'];
+
+    if (!empty($_SESSION['usuario_id']) && !empty($_SESSION['debe_cambiar_pass']) && !in_array($self, $permitidos, true)) {
         header('Location: cambiar_password.php');
         exit;
     }

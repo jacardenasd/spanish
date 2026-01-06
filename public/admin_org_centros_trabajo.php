@@ -158,10 +158,15 @@ if ($f_estatus !== '' && in_array($f_estatus, ['0','1'], true)) {
     $where[] = "estatus = :estatus";
     $params[':estatus'] = (int)$f_estatus;
 }
+
 if ($f_q !== '') {
-    $where[] = "(CAST(centro_trabajo_id AS CHAR) LIKE :q OR nombre LIKE :q OR clave LIKE :q)";
-    $params[':q'] = '%' . $f_q . '%';
+    $where[] = "(CAST(centro_trabajo_id AS CHAR) LIKE :q1 OR nombre LIKE :q2 OR clave LIKE :q3)";
+    $q = '%' . $f_q . '%';
+    $params[':q1'] = $q;
+    $params[':q2'] = $q;
+    $params[':q3'] = $q;
 }
+
 
 $sql = "SELECT empresa_id, centro_trabajo_id, nombre, clave, estatus
           FROM org_centros_trabajo
@@ -185,6 +190,23 @@ require_once __DIR__ . '/../includes/layout/head.php';
 require_once __DIR__ . '/../includes/layout/navbar.php';
 require_once __DIR__ . '/../includes/layout/sidebar.php';
 require_once __DIR__ . '/../includes/layout/content_open.php';
+require_once __DIR__ . '/../includes/export_excel.php';
+
+if (!empty($_GET['export']) && $_GET['export'] == '1') {
+    $headers = ['ID', 'Nombre', 'Clave', 'Estatus'];
+
+    $data = [];
+    foreach ($rows as $r) {
+        $data[] = [
+            $r['centro_trabajo_id'],
+            $r['nombre'] ?? '',
+            $r['clave'] ?? '',
+            ((int)$r['estatus'] === 1) ? 'Activo' : 'Inactivo',
+        ];
+    }
+
+    export_xlsx('centros_trabajo.xlsx', $headers, $data);
+}
 ?>
 
 <div class="page-header page-header-light">
@@ -222,6 +244,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
         <div class="col-md-3 d-flex align-items-end">
           <button class="btn btn-primary" type="submit"><i class="icon-search4 mr-2"></i>Aplicar</button>
           <a class="btn btn-light ml-2" href="admin_org_centros_trabajo.php">Limpiar</a>
+          <a class="btn btn-success ml-2" href="admin_org_centros_trabajo.php?export=1&q=<?php echo urlencode($f_q); ?>&estatus=<?php echo urlencode($f_estatus); ?>">Exportar Excel</a>
         </div>
       </form>
     </div>

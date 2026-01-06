@@ -183,9 +183,12 @@ if ($f_estatus !== '' && in_array($f_estatus, ['0','1'], true)) {
 }
 
 if ($f_q !== '') {
-    $where[] = "(u.nombre LIKE :q OR u.clave LIKE :q)";
-    $params[':q'] = '%' . $f_q . '%';
+    $where[] = "(u.nombre LIKE :q1 OR u.clave LIKE :q2)";
+    $q = '%' . $f_q . '%';
+    $params[':q1'] = $q;
+    $params[':q2'] = $q;
 }
+
 
 $where_sql = 'WHERE ' . implode(' AND ', $where);
 
@@ -228,6 +231,26 @@ require_once __DIR__ . '/../includes/layout/head.php';
 require_once __DIR__ . '/../includes/layout/navbar.php';
 require_once __DIR__ . '/../includes/layout/sidebar.php';
 require_once __DIR__ . '/../includes/layout/content_open.php';
+require_once __DIR__ . '/../includes/export_excel.php';
+
+if (!empty($_GET['export']) && $_GET['export'] == '1') {
+
+    $headers = ['ID', 'Nombre', 'Clave', 'Unidad padre', 'Estatus'];
+
+    $data = [];
+    foreach ($rows as $r) {
+        $data[] = [
+            $r['unidad_id'],
+            $r['nombre'] ?? '',
+            $r['clave'] ?? '',
+            $r['padre_nombre'] ?? '',
+            ((int)$r['estatus'] === 1) ? 'Activo' : 'Inactivo',
+        ];
+    }
+
+    export_xlsx('unidades.xlsx', $headers, $data);
+}
+
 ?>
 
 <div class="page-header page-header-light">
@@ -281,6 +304,9 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
                         <i class="icon-search4 mr-2"></i> Aplicar
                     </button>
                     <a href="admin_org_unidades.php" class="btn btn-light ml-2">Limpiar</a>
+                    <a class="btn btn-success ml-2" href="admin_org_unidades.php?export=1&q=<?php echo urlencode($f_q); ?>&estatus=<?php echo urlencode($f_estatus); ?>">Exportar Excel</a>
+
+
                 </div>
             </form>
         </div>
@@ -301,7 +327,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
         </div>
 
         <div class="table-responsive">
-            <table class="table table-striped table-hover" id="tabla_unidades">
+            <table class="table" id="tabla_unidades">
                 <thead>
                     <tr>
                         <th>ID</th>

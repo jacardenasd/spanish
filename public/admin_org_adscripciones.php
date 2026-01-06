@@ -142,8 +142,11 @@ if ($f_unidad_id > 0) {
     $params[':uid'] = $f_unidad_id;
 }
 if ($f_q !== '') {
-    $where[] = "(a.nombre LIKE :q OR a.clave LIKE :q OR u.nombre LIKE :q)";
-    $params[':q'] = '%' . $f_q . '%';
+    $where[] = "(a.nombre LIKE :q1 OR a.clave LIKE :q2 OR u.nombre LIKE :q3)";
+    $q = '%' . $f_q . '%';
+    $params[':q1'] = $q;
+    $params[':q2'] = $q;
+    $params[':q3'] = $q;
 }
 
 $sql = "
@@ -178,6 +181,24 @@ require_once __DIR__ . '/../includes/layout/head.php';
 require_once __DIR__ . '/../includes/layout/navbar.php';
 require_once __DIR__ . '/../includes/layout/sidebar.php';
 require_once __DIR__ . '/../includes/layout/content_open.php';
+require_once __DIR__ . '/../includes/export_excel.php';
+
+if (!empty($_GET['export']) && $_GET['export'] == '1') {
+    $headers = ['ID', 'Unidad', 'Subárea', 'Clave', 'Estatus'];
+
+    $data = [];
+    foreach ($rows as $r) {
+        $data[] = [
+            $r['adscripcion_id'],
+            $r['unidad_nombre'] ?? '',
+            $r['nombre'] ?? '',
+            $r['clave'] ?? '',
+            ((int)$r['estatus'] === 1) ? 'Activo' : 'Inactivo',
+        ];
+    }
+
+    export_xlsx('adscripciones.xlsx', $headers, $data);
+}
 ?>
 
 <div class="page-header page-header-light">
@@ -226,6 +247,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
         <div class="col-md-12 mt-3">
           <button class="btn btn-primary" type="submit"><i class="icon-search4 mr-2"></i>Aplicar</button>
           <a class="btn btn-light ml-2" href="admin_org_adscripciones.php">Limpiar</a>
+          <a class="btn btn-success ml-2" href="admin_org_adscripciones.php?export=1&q=<?php echo urlencode($f_q); ?>&unidad_id=<?php echo (int)$f_unidad_id; ?>&estatus=<?php echo urlencode($f_estatus); ?>">Exportar Excel</a>
         </div>
       </form>
     </div>
