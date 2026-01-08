@@ -90,6 +90,8 @@ function login_intento($rfc_raw, $password) {
         $_SESSION['empresa_nombre'] = $empresas[0]['nombre'];
         $_SESSION['empresa_alias'] = $empresas[0]['alias'];
         $_SESSION['es_admin_empresa'] = (int)$empresas[0]['es_admin'];
+        $_SESSION['empleado_id'] = $usuario['empleado_id'];
+
 
         // Cargar permisos
         cargar_permisos_sesion((int)$u_match['usuario_id']);
