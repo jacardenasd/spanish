@@ -31,7 +31,7 @@ function contrato_abs_path($path) {
  *
  * @param string $templateFile Ruta al archivo .txt/.md/.html con placeholders
  * @param array  $vars         Diccionario campo => valor
- * @param array  $opts         Opciones: title, logo_path, output_path, paper (letter/folio), orientation, is_html
+ * @param array  $opts         Opciones: title, logo_path, output_path, paper (legal/oficio), orientation, is_html
  *
  * @return array { ok: bool, path: string, bytes: int, error?: string }
  */
@@ -63,7 +63,8 @@ function contratos_render_pdf($templateFile, array $vars, array $opts = array())
 
     $title = isset($opts['title']) ? (string)$opts['title'] : 'Contrato';
     $logoPath = isset($opts['logo_path']) ? contrato_abs_path($opts['logo_path']) : '';
-    $paper = isset($opts['paper']) ? $opts['paper'] : 'letter';
+    // Oficio = legal en Dompdf
+    $paper = isset($opts['paper']) ? $opts['paper'] : 'legal';
     $orientation = isset($opts['orientation']) ? $opts['orientation'] : 'portrait';
 
     $logoHtml = '';
@@ -205,6 +206,8 @@ function contratos_generar_y_guardar($templateFile, array $vars, array $meta) {
         'logo_path' => $logo,
         'output_path' => $destPath,
         'is_html' => $isHtml,
+        // Por defecto todos los contratos van en tamaño oficio
+        'paper' => isset($meta['paper']) ? $meta['paper'] : 'legal',
     ));
 
     if (!$render['ok']) return $render;

@@ -264,6 +264,8 @@ try {
         'apellido_paterno' => ':ap',
         'apellido_materno' => ':am',
         'es_activo' => ':es_activo',
+        'correo' => ':correo',
+        'telefono' => ':telefono',
         'fecha_ingreso' => ':fi',
         'fecha_baja' => ':fb',
         'tipo_empleado_id' => ':tipo_id',
@@ -411,6 +413,57 @@ try {
             $telefono_excel = trim((string)$sheet->getCell("X{$r}")->getValue());
         } catch (Throwable $e) { /* columna no existe */ }
 
+        // Columnas adicionales demograficas (Y-AJ)
+        $tipo_nomina_excel = '';
+        $nss_excel = '';
+        $domicilio_calle_excel = '';
+        $domicilio_municipio_excel = '';
+        $domicilio_colonia_excel = '';
+        $domicilio_cp_excel = '';
+        $domicilio_estado_excel = '';
+        $domicilio_num_ext_excel = '';
+        $clabe_excel = '';
+        $credito_infonavit_excel = '';
+        $unidad_medica_familiar_excel = '';
+        $banco_excel = '';
+
+        try {
+            $tipo_nomina_excel = trim((string)$sheet->getCell("Y{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $nss_excel = trim((string)$sheet->getCell("Z{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_calle_excel = trim((string)$sheet->getCell("AA{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_municipio_excel = trim((string)$sheet->getCell("AB{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_colonia_excel = trim((string)$sheet->getCell("AC{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_cp_excel = trim((string)$sheet->getCell("AD{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_estado_excel = trim((string)$sheet->getCell("AE{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $domicilio_num_ext_excel = trim((string)$sheet->getCell("AF{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $clabe_excel = trim((string)$sheet->getCell("AG{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $credito_infonavit_excel = trim((string)$sheet->getCell("AH{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $unidad_medica_familiar_excel = trim((string)$sheet->getCell("AI{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+        try {
+            $banco_excel = trim((string)$sheet->getCell("AJ{$r}")->getValue());
+        } catch (Throwable $e) { /* columna no existe */ }
+
         $payloadArr = [
             'NOMBRE DE EMPRESA' => $empresaNombre,
             'NUMERO EMPLEADO' => $no_emp,
@@ -439,6 +492,18 @@ try {
             'SALARIO MENSUAL EMPLEADO' => $salario_mensual,
             'CORREO' => $correo_excel,
             'TELEFONO' => $telefono_excel,
+            'TIPO_NOMINA' => $tipo_nomina_excel,
+            'NSS' => $nss_excel,
+            'DOMICILIO_CALLE' => $domicilio_calle_excel,
+            'DOMICILIO_MUNICIPIO' => $domicilio_municipio_excel,
+            'DOMICILIO_COLONIA' => $domicilio_colonia_excel,
+            'DOMICILIO_CP' => $domicilio_cp_excel,
+            'DOMICILIO_ESTADO' => $domicilio_estado_excel,
+            'DOMICILIO_NUM_EXT' => $domicilio_num_ext_excel,
+            'CLABE' => $clabe_excel,
+            'CREDITO_INFONAVIT' => $credito_infonavit_excel,
+            'UNIDAD_MEDICA_FAMILIAR' => $unidad_medica_familiar_excel,
+            'BANCO' => $banco_excel,
             '_BUSQUEDA_adscripcion_id' => $adscripcion_id_real,
             '_BUSQUEDA_puesto_id' => $puesto_id_real,
             '_BUSQUEDA_unidad_id' => $unidad_id_real,
@@ -608,6 +673,8 @@ try {
                 case ':ap': $empParams[':ap'] = ($ap !== '' ? $ap : null); break;
                 case ':am': $empParams[':am'] = ($am !== '' ? $am : null); break;
                 case ':es_activo': $empParams[':es_activo'] = $es_activo; break;
+                case ':correo': $empParams[':correo'] = ($correo_excel !== '' ? $correo_excel : null); break;
+                case ':telefono': $empParams[':telefono'] = ($telefono_excel !== '' ? $telefono_excel : null); break;
                 case ':unidad_id': $empParams[':unidad_id'] = $unidad_id_real; break;
                 case ':adscripcion_id': $empParams[':adscripcion_id'] = $adscripcion_id_real; break;
                 case ':puesto_id': $empParams[':puesto_id'] = $puesto_id_real; break;
@@ -682,23 +749,105 @@ try {
             }
         }
 
-        // Insertar/actualizar empleados_demograficos (correo y telefono)
+        // Insertar/actualizar empleados_demograficos (validación dinámica de columnas)
         if ($empleado_id !== null) {
             try {
-                $pdo->prepare("
-                    INSERT INTO empleados_demograficos (empleado_id, correo, telefono)
-                    VALUES (:empid, :correo, :telefono)
-                    ON DUPLICATE KEY UPDATE
-                        correo = COALESCE(VALUES(correo), correo),
-                        telefono = COALESCE(VALUES(telefono), telefono)
-                ")->execute([
-                    ':empid' => $empleado_id,
-                    ':correo' => ($correo_excel !== '' ? $correo_excel : null),
-                    ':telefono' => ($telefono_excel !== '' ? $telefono_excel : null)
-                ]);
+                // Verificar qué columnas existen realmente en empleados_demograficos
+                static $colsDemograficos = null;
+                if ($colsDemograficos === null) {
+                    $colsDemograficos = table_columns($pdo, 'empleados_demograficos');
+                }
+
+                // Convertir credito_infonavit a 1/0
+                $tiene_credito_infonavit = null;
+                if ($credito_infonavit_excel !== '') {
+                    $credito_upper = strtoupper($credito_infonavit_excel);
+                    if (in_array($credito_upper, ['SI', 'SÍ', 'S', '1', 'YES'])) {
+                        $tiene_credito_infonavit = 1;
+                    } elseif (in_array($credito_upper, ['NO', 'N', '0'])) {
+                        $tiene_credito_infonavit = 0;
+                    }
+                }
+
+                // Buscar banco_id por nombre
+                $banco_id_val = null;
+                if ($banco_excel !== '') {
+                    static $bancos_cache = null;
+                    if ($bancos_cache === null) {
+                        $bancos_cache = [];
+                        $stmtBancos = $pdo->query("SELECT banco_id, nombre FROM cat_bancos");
+                        while ($row = $stmtBancos->fetch(PDO::FETCH_ASSOC)) {
+                            $bancos_cache[strtoupper($row['nombre'])] = $row['banco_id'];
+                        }
+                    }
+                    $banco_upper = strtoupper(trim($banco_excel));
+                    if (isset($bancos_cache[$banco_upper])) {
+                        $banco_id_val = $bancos_cache[$banco_upper];
+                    }
+                }
+
+                // Mapa de datos demograficos a insertar
+                $demogData = [
+                    'empleado_id' => $empleado_id,
+                    'correo' => ($correo_excel !== '' ? $correo_excel : null),
+                    'telefono' => ($telefono_excel !== '' ? $telefono_excel : null),
+                    'tipo_nomina' => ($tipo_nomina_excel !== '' ? $tipo_nomina_excel : null),
+                    'nss' => ($nss_excel !== '' ? $nss_excel : null),
+                    'domicilio_calle' => ($domicilio_calle_excel !== '' ? $domicilio_calle_excel : null),
+                    'domicilio_municipio' => ($domicilio_municipio_excel !== '' ? $domicilio_municipio_excel : null),
+                    'domicilio_colonia' => ($domicilio_colonia_excel !== '' ? $domicilio_colonia_excel : null),
+                    'domicilio_cp' => ($domicilio_cp_excel !== '' ? $domicilio_cp_excel : null),
+                    'domicilio_estado' => ($domicilio_estado_excel !== '' ? $domicilio_estado_excel : null),
+                    'domicilio_num_ext' => ($domicilio_num_ext_excel !== '' ? $domicilio_num_ext_excel : null),
+                    'clabe' => ($clabe_excel !== '' ? $clabe_excel : null),
+                    'tiene_credito_infonavit' => $tiene_credito_infonavit,
+                    'unidad_medica_familiar' => ($unidad_medica_familiar_excel !== '' ? $unidad_medica_familiar_excel : null),
+                    'banco_id' => $banco_id_val
+                ];
+
+                // Filtrar solo columnas que existen
+                $insertCols = [];
+                $insertVals = [];
+                $insertParams = [];
+                foreach ($demogData as $col => $val) {
+                    if (isset($colsDemograficos[$col])) {
+                        $insertCols[] = $col;
+                        $insertVals[] = ':' . $col;
+                        $insertParams[':' . $col] = $val;
+                    }
+                }
+
+                if (count($insertCols) > 0) {
+                    // Construir UPDATE dinámico (solo columnas que no sean PK)
+                    $updates = [];
+                    foreach ($insertCols as $col) {
+                        if ($col === 'empleado_id') continue;
+                        $updates[] = "$col = COALESCE(VALUES($col), $col)";
+                    }
+
+                    $sql = "INSERT INTO empleados_demograficos (" . implode(', ', $insertCols) . ") 
+                            VALUES (" . implode(', ', $insertVals) . ")";
+                    
+                    if (count($updates) > 0) {
+                        $sql .= " ON DUPLICATE KEY UPDATE " . implode(', ', $updates);
+                    }
+
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute($insertParams);
+                }
             } catch (Throwable $e) {
-                // Log el error pero no romper importación
-                error_log("Error demograficos empleado {$empleado_id}: " . $e->getMessage());
+                // Log detallado del error
+                $msg = "Error demograficos empleado {$empleado_id} (no_emp={$no_emp}): " . $e->getMessage();
+                error_log($msg);
+                // Agregar al detalle de importación para visibilidad
+                $insDet->execute([
+                    ':iid'=>$import_id,
+                    ':no'=>$no_emp,
+                    ':rfc'=>($rfc !== '' ? $rfc : 'SINRFCBASE'),
+                    ':payload'=>json_encode(['error_demograficos'=>$msg], JSON_UNESCAPED_UNICODE),
+                    ':acc'=>'warning',
+                    ':msg'=>'Datos básicos OK, error en demograficos'
+                ]);
             }
         }
 

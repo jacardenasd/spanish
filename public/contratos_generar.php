@@ -5,9 +5,20 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/conexion.php';
 require_once __DIR__ . '/../includes/guard.php';
+require_once __DIR__ . '/../includes/permisos.php';
 
 require_login();
 require_empresa();
+
+// Validar permisos: contratos.crear O usuarios.admin
+if (function_exists('require_perm_any')) {
+    require_perm_any(['contratos.crear', 'usuarios.admin']);
+} else {
+    if (!can('contratos.crear') && !can('usuarios.admin')) {
+        header('Location: sin_permiso.php');
+        exit;
+    }
+}
 
 $empresa_id = isset($_SESSION['empresa_id']) ? (int)$_SESSION['empresa_id'] : 0;
 
@@ -80,26 +91,26 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
   <div class="page-header-content">
     <div class="page-title d-flex">
       <h4><i class="icon-briefcase mr-2"></i> Kit de Contratación</h4>
-      <a href="contratos_importar_empleado.php" class="btn btn-primary btn-labeled btn-labeled-left mr-2">
-        <b><i class="icon-file-text2"></i></b> Importar Empleado Tipo 1
-      </a>
-      <a href="contratos_nuevo_empleado.php" class="btn btn-success btn-labeled btn-labeled-left">
-        <b><i class="icon-user-plus"></i></b> Agregar Empleado Nuevo
-      </a>
     </div>
   </div>
 </div>
 
 <div class="content">
   
-  <div class="alert alert-info alert-styled-left">
-    <span class="font-weight-semibold">Nueva funcionalidad:</span> Ahora puede importar empleados con Tipo 1 (Temporal/Determinado) para generar contratos permanentes. 
-    <a href="contratos_importar_empleado.php" class="alert-link">Haga clic aquí para ver la lista de empleados disponibles</a>.
+  <div class="card mb-3">
+    <div class="card-body d-flex flex-wrap">
+      <a href="contratos_importar_empleado.php" class="btn btn-primary btn-labeled btn-labeled-left mr-2 mb-2">
+        <b><i class="icon-file-text2"></i></b> Importar Empleado Tipo 1
+      </a>
+      <a href="contratos_nuevo_empleado.php" class="btn btn-success btn-labeled btn-labeled-left mb-2">
+        <b><i class="icon-user-plus"></i></b> Agregar Empleado Nuevo
+      </a>
+    </div>
   </div>
   
   <div class="card">
     <div class="card-header">
-      <h6 class="card-title">Empleados en Proceso de Contratación</h6>
+      <h6 class="card-title">Empleados</h6>
       <span class="badge badge-primary"><?php echo count($empleados); ?> registros</span>
     </div>
     <div class="card-body">
@@ -109,8 +120,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
             <th>Nombre</th>
             <th>RFC</th>
             <th>CURP</th>
-            <th>Sueldo</th>
-            <th>Estado</th>
+            <th>Fecha alta</th>
             <th>Completitud</th>
             <th>Acciones</th>
           </tr>
@@ -138,14 +148,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
               </td>
               <td><?php echo h($emp['rfc'] ? $emp['rfc'] : '-'); ?></td>
               <td><?php echo h($emp['curp'] ? $emp['curp'] : '-'); ?></td>
-              <td><?php echo $emp['sueldo_mensual'] ? '$' . number_format($emp['sueldo_mensual'], 2) : '-'; ?></td>
-              <td>
-                <?php 
-                  $estados = array('nuevo' => 'primary', 'en_proceso' => 'warning', 'completado' => 'success', 'rechazado' => 'danger');
-                  $color = isset($estados[$emp['estatus']]) ? $estados[$emp['estatus']] : 'secondary';
-                ?>
-                <span class="badge badge-<?php echo $color; ?>"><?php echo h(ucfirst($emp['estatus'])); ?></span>
-              </td>
+              <td><?php echo !empty($emp['fecha_creacion']) ? date('d/m/Y', strtotime($emp['fecha_creacion'])) : '-'; ?></td>
               <td>
                 <?php if ($emp['datos_completos'] == 1): ?>
                   <span class="badge badge-success"><i class="icon-checkmark"></i> Completo</span>

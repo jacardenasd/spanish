@@ -205,13 +205,15 @@ $clima_user_active = in_array($active_menu, [
 
               <li class="nav-item-divider"></li>
 
+              <?php endif; ?>
+
+              <?php if (can('organizacion.admin') || can('clima.admin')): ?>
               <li class="nav-item">
                 <a href="<?php echo ASSET_BASE; ?>public/clima_admin.php"
                   class="nav-link <?php echo is_active('clima_admin', $active_menu); ?>">
                  Clima Laboral
                 </a>
               </li>
-
               <?php endif; ?>
 
             </ul>

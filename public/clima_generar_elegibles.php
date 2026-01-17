@@ -32,8 +32,13 @@ if (function_exists('require_password_change_redirect')) {
 }
 
 // Ajusta permiso según tu sistema
-if (function_exists('require_perm')) {
-    require_perm('organizacion.admin');
+if (function_exists('require_perm_any')) {
+  require_perm_any(['organizacion.admin', 'clima.admin']);
+} else if (function_exists('require_perm')) {
+  if (!can('organizacion.admin') && !can('clima.admin')) {
+    header('Location: sin_permiso.php');
+    exit;
+  }
 }
 
 $empresa_id = (int)($_SESSION['empresa_id'] ?? 0);

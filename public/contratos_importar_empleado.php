@@ -5,9 +5,20 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/conexion.php';
 require_once __DIR__ . '/../includes/guard.php';
+require_once __DIR__ . '/../includes/permisos.php';
 
 require_login();
 require_empresa();
+
+// Validar permisos: contratos.crear O usuarios.admin
+if (function_exists('require_perm_any')) {
+    require_perm_any(['contratos.crear', 'usuarios.admin']);
+} else {
+    if (!can('contratos.crear') && !can('usuarios.admin')) {
+        header('Location: sin_permiso.php');
+        exit;
+    }
+}
 
 $empresa_id = isset($_SESSION['empresa_id']) ? (int)$_SESSION['empresa_id'] : 0;
 

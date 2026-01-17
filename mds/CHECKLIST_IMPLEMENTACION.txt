@@ -1,0 +1,275 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    ☑️  CHECKLIST DE IMPLEMENTACIÓN                           ║
+║              Configurar Correos Titan en SGRH - Paso a Paso                 ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+📋 ANTES DE EMPEZAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Requisitos:
+  ☐ Cuenta en GoDaddy con dominio activo
+  ☐ Correo Titan configurado en GoDaddy
+  ☐ PHP 7.4+ instalado en MAMP
+  ☐ MAMP ejecutándose (Apache + MySQL)
+  ☐ Acceso a modificar archivos del proyecto
+
+
+🔧 PASO 1: OBTENER CREDENCIALES DE GODADDY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ☐ 1. Abrir: https://www.godaddy.com
+  ☐ 2. Iniciar sesión con tu cuenta
+  ☐ 3. Ir a: Productos → Email (o Correo)
+  ☐ 4. Seleccionar dominio: TUDOMINITO.com
+  ☐ 5. Buscar sección: "Configuración SMTP" o "Configuración de servidor"
+  ☐ 6. Anotar los datos:
+      
+      Mi servidor SMTP:     _________________________
+      Mi puerto:            _________________________
+      Mi usuario (correo):  _________________________
+      Mi contraseña:        _________________________
+      
+
+  💡 Típicamente son:
+     Host:     mail.TUDOMINITO.com
+     Puerto:   465 (SSL) o 587 (STARTTLS)
+     Usuario:  admin@TUDOMINITO.com
+     Contraseña: tu_contraseña_titan
+
+
+🔧 PASO 2: EDITAR includes/mail_config.php
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ☐ 1. Abrir archivo: includes/mail_config.php
+  
+  ☐ 2. Modificar línea 10:
+      ANTES: define('SMTP_HOST', 'mail.tunombre.com');
+      DESPUÉS: define('SMTP_HOST', 'mail.TUDOMINITO.com');
+      
+  ☐ 3. Modificar línea 12:
+      ANTES: define('SMTP_PORT', 465);
+      DESPUÉS: define('SMTP_PORT', 465);  // o 587 si lo prefieres
+      
+  ☐ 4. Modificar línea 14:
+      ANTES: define('SMTP_SECURE', 'ssl');
+      DESPUÉS: define('SMTP_SECURE', 'ssl');  // o 'tls' para puerto 587
+      
+  ☐ 5. Modificar línea 16:
+      ANTES: define('SMTP_USERNAME', 'tu_correo@tunombre.com');
+      DESPUÉS: define('SMTP_USERNAME', 'admin@TUDOMINITO.com');
+      
+  ☐ 6. Modificar línea 17:
+      ANTES: define('SMTP_PASSWORD', 'tu_contraseña_aqui');
+      DESPUÉS: define('SMTP_PASSWORD', 'TuContraseñaTitan');
+      
+  ☐ 7. Modificar línea 20 (opcional):
+      ANTES: define('MAIL_FROM_ADDRESS', 'tu_correo@tunombre.com');
+      DESPUÉS: define('MAIL_FROM_ADDRESS', 'admin@TUDOMINITO.com');
+      
+  ☐ 8. Guardar archivo (Ctrl+S)
+
+  ✓ Archivo completado: includes/mail_config.php
+
+
+🔧 PASO 3: INSTALAR DEPENDENCIAS CON COMPOSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ☐ 1. Abrir terminal (PowerShell, CMD o Terminal de VS Code)
+  
+  ☐ 2. Navegar a carpeta del proyecto:
+      cd c:\MAMP\htdocs\sgrh
+      
+  ☐ 3. Ejecutar Composer:
+      composer update
+      
+  ☐ 4. Esperar a que termine (puede tomar 1-2 minutos)
+  
+  ☐ 5. Verificar que no haya errores rojo en la terminal
+  
+  ☐ 6. Verificar que se creó carpeta vendor/phpmailer/:
+      Abre explorador → c:\MAMP\htdocs\sgrh\vendor\phpmailer\
+      Debe haber carpeta "phpmailer"
+
+  ✓ Dependencias instaladas correctamente
+
+
+🔧 PASO 4: VERIFICAR CONFIGURACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ☐ 1. Asegúrate que MAMP esté ejecutándose (Apache + MySQL)
+  
+  ☐ 2. Abre navegador y ve a:
+      http://localhost/sgrh/public/diagnostico_correos.php
+      
+  ☐ 3. Revisa los resultados:
+      ✓ Versión PHP                    (debe estar OK)
+      ✓ Extensión OpenSSL              (debe estar OK)
+      ✓ PHPMailer instalado            (debe estar OK)
+      ✓ mail_config.php                (debe estar OK)
+      ✓ SMTP configurado               (debe estar OK)
+      ✓ Permiso de escritura storage   (debe estar OK)
+      
+  ☐ 4. Si alguno está en ERROR o WARNING:
+      Revisa la solución en CONFIG_CORREOS_TITAN.md
+      
+  ✓ Configuración verificada
+
+
+🔧 PASO 5: PRUEBA DE ENVÍO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ☐ 1. Abre navegador:
+      http://localhost/sgrh/public/test_mailer.php
+      
+  ☐ 2. Ingresa datos:
+      • Correo Destino:     tu_email_personal@gmail.com
+      • Nombre del Usuario: Tu Nombre
+      • Asunto:             Prueba SGRH
+      • Tipo de Correo:     Recuperación de Contraseña
+      
+  ☐ 3. Haz clic en botón: "🚀 Enviar Prueba"
+  
+  ☐ 4. Espera respuesta (5-10 segundos)
+  
+  ☐ 5. Resultado:
+      ✓ Si dice "✓ Éxito" → ¡Perfecto! Ve al paso 6
+      ✗ Si dice "✗ Error" → Revisa log en diagnostico_correos.php
+      
+  ☐ 6. Revisa tu email:
+      • Abre bandeja de entrada
+      • Si no está, revisa carpeta SPAM
+      • Debería haber correo con asunto relacionado
+      
+  ✓ Prueba completada exitosamente
+
+
+🔧 PASO 6: INTEGRACIÓN OPCIONAL (Recuperación de Contraseña)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Solo si quieres mejorar el formulario de recuperación de contraseña:
+
+  ☐ 1. Lee archivo: INTEGRACION_RECUPERACION_CONTRASENA.txt
+  
+  ☐ 2. Abre archivo: public/recuperar_contrasena.php
+  
+  ☐ 3. En las primeras líneas, agrega:
+      require_once __DIR__ . '/../includes/mail_templates.php';
+      
+  ☐ 4. Busca la parte donde se genera el correo (línea ~30)
+  
+  ☐ 5. Reemplaza el $html simple con:
+      $html = plantilla_recuperar_contrasena($nombre, $enlace);
+      
+  ☐ 6. Haz lo mismo en resetear_guardar.php para confirmación:
+      $html = plantilla_contrasena_cambiada($nombre);
+      
+  ☐ 7. Prueba el flujo completo de recuperación
+
+
+📊 VERIFICACIÓN FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Verifica que todo esté en su lugar:
+
+  ☐ Archivo mail_config.php existe y está editado
+  ☐ Carpeta vendor/phpmailer/ existe
+  ☐ test_mailer.php funciona sin errores
+  ☐ Prueba de envío llegó exitosamente
+  ☐ diagnostico_correos.php muestra todo en verde
+  ☐ (Opcional) Formulario recuperación integrado
+
+
+⚠️ RESOLUCIÓN DE PROBLEMAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si test_mailer.php NO funciona:
+
+  ☐ Revisión 1: Credenciales
+     • Abre mail_config.php
+     • Verifica que los datos sean exactos de GoDaddy
+     • Sin espacios en blanco antes o después
+     • Copia/pega directamente de GoDaddy si puedes
+     
+  ☐ Revisión 2: Puerto
+     • Si puerto 465 no funciona, intenta 587
+     • En mail_config.php: define('SMTP_PORT', 587);
+     • En mail_config.php: define('SMTP_SECURE', 'tls');
+     
+  ☐ Revisión 3: PHPMailer
+     • Abre terminal
+     • cd c:\MAMP\htdocs\sgrh
+     • composer update
+     • Espera a que termine
+     
+  ☐ Revisión 4: OpenSSL
+     • Abre navegador: http://localhost/sgrh/public/diagnostico_correos.php
+     • Busca "OpenSSL"
+     • Debe estar INSTALADA
+     • Si no, busca COMO HABILITAR PHP OPENSSL (depende de tu PHP)
+     
+  ☐ Revisión 5: Firewall/Antivirus
+     • Algunos antivirus bloquean puerto 465
+     • Intenta desactivar temporalmente para probar
+     
+  ☐ Última opción: Soporte GoDaddy
+     • Contacta a GoDaddy
+     • Dile que necesitas verificar credenciales SMTP Titan
+     • Solicita que verifique que el puerto esté abierto
+
+
+📱 DESPUÉS: PRODUCCIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cuando pases a producción:
+
+  ☐ En includes/config.php, cambiar:
+     ANTES: define('APP_ENV', 'dev');
+     DESPUÉS: define('APP_ENV', 'prod');
+     
+  ☐ Usar .env para credenciales (no en el código)
+  
+  ☐ Configurar SPF/DKIM en GoDaddy
+  
+  ☐ Cambiar APP_URL a dominio real en config.php
+  
+  ☐ Prueba en ambiente real antes de ir a usuarios
+
+
+✅ COMPLETADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si marcaste todos los ☑️ de los pasos 1-5:
+  
+  ✅ Tu sistema de correos está LISTO
+  ✅ Puedes enviar recuperación de contraseña
+  ✅ Puedes personalizar con plantillas HTML
+  ✅ Tu SGRH tiene correos profesionales
+
+
+📚 REFERENCIAS RÁPIDAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Documentación:
+  • GUIA_RAPIDA_CORREOS.md           (3 pasos en 5 minutos)
+  • CONFIG_CORREOS_TITAN.md          (guía completa)
+  • INTEGRACION_RECUPERACION_CONTRASENA.txt
+  • public/ejemplo_uso_correos.php   (código de ejemplo)
+
+Herramientas:
+  • http://localhost/sgrh/public/test_mailer.php
+  • http://localhost/sgrh/public/diagnostico_correos.php
+
+Archivos:
+  • includes/mail_config.php         (configuración)
+  • includes/mailer.php              (función principal)
+  • includes/mail_templates.php      (plantillas)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+Completado: 2026-01-16
+Autor: Sistema de Configuración
+Estado: ✅ Listo para usar
+═══════════════════════════════════════════════════════════════════════════════

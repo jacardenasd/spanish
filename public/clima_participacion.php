@@ -17,7 +17,15 @@ require_password_change_redirect();
 require_demograficos_redirect();
 
 // Ajusta el permiso si tu clave es otra (ej. 'clima.admin')
-require_perm('organizacion.admin');
+// Permitir acceso con cualquiera de estos permisos
+if (function_exists('require_perm_any')) {
+  require_perm_any(['organizacion.admin', 'clima.admin']);
+} else {
+  if (!can('organizacion.admin') && !can('clima.admin')) {
+    header('Location: sin_permiso.php');
+    exit;
+  }
+}
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 

@@ -1,0 +1,213 @@
+<?php
+/**
+ * GUÍA DE INTEGRACIÓN: Correos de Recuperación en recuperar_contrasena.php
+ * 
+ * Este archivo muestra cómo mejorar el código existente en
+ * public/recuperar_contrasena.php con las nuevas plantillas de correo.
+ */
+?>
+
+<!-- 
+╔════════════════════════════════════════════════════════════════════════╗
+║          MEJORA: Integrar Plantillas HTML en Recuperación             ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+ARCHIVO ACTUAL:
+  public/recuperar_contrasena.php
+
+CÓDIGO ACTUAL (LÍNEA ~30):
+  $html = "
+    <p>Se solicitó un restablecimiento de contraseña para tu cuenta SGRH.</p>
+    <p>Da clic en el siguiente enlace (vigente por 60 minutos):</p>
+    <p><a href=\"{$link}\">Restablecer contraseña</a></p>
+    <p>Si no solicitaste esto, ignora este mensaje.</p>
+  ";
+
+  $okMail = enviar_correo($u['correo'], 'Restablecer contraseña | SGRH', $html);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MEJORA SUGERIDA - Usar Plantilla Profesional:
+
+PASO 1: Agregar require al inicio del archivo
+────────────────────────────────────────────
+require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/mail_templates.php';  // ← AGREGAR
+
+PASO 2: Reemplazar el código de correo (línea ~30)
+────────────────────────────────────────────
+/* ELIMINA ESTO:
+$html = "
+  <p>Se solicitó un restablecimiento de contraseña para tu cuenta SGRH.</p>
+  <p>Da clic en el siguiente enlace (vigente por 60 minutos):</p>
+  <p><a href=\"{$link}\">Restablecer contraseña</a></p>
+  <p>Si no solicitaste esto, ignora este mensaje.</p>
+";
+*/
+
+/* REEMPLAZA CON ESTO: */
+$base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+$link = $base . dirname($_SERVER['REQUEST_URI']) . '/resetear.php?token=' . urlencode($token);
+
+// Obtener nombre del usuario (si está disponible)
+$nombre_usuario = $u['nombre'] ?? 'Usuario'; // Ajusta según tu estructura de BD
+
+// Usar plantilla profesional
+$html = plantilla_recuperar_contrasena($nombre_usuario, $link);
+
+// Enviar
+$okMail = enviar_correo($u['correo'], 'Recupera tu contraseña - SGRH', $html);
+
+────────────────────────────────────────────
+
+VENTAJAS:
+  ✓ Correo profesional con estilos CSS
+  ✓ Mejor experiencia del usuario
+  ✓ Incluye advertencia de expiración
+  ✓ Responsive para móviles
+  ✓ Fácil de personalizar
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CÓDIGO COMPLETO MEJORADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<?php
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/password_reset.php';
+require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/mail_templates.php';  // ← NUEVO
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+$mensaje = '';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $rfc = $_POST['rfc'] ?? '';
+    $no_emp = $_POST['no_emp'] ?? '';
+
+    $u = pr_find_user_by_rfc_noemp($rfc, $no_emp);
+
+    // Respuesta genérica (anti-enumeración)
+    $mensaje = 'Si la información es correcta, recibirás un correo con instrucciones.';
+
+    if ($u && $u['estatus'] === 'activo' && !empty($u['correo'])) {
+        $token = pr_create_token((int)$u['usuario_id'], $_SERVER['REMOTE_ADDR'] ?? null);
+
+        // Construir enlace
+        $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') 
+              . '://' . $_SERVER['HTTP_HOST'];
+        $link = $base . dirname($_SERVER['REQUEST_URI']) . '/resetear.php?token=' . urlencode($token);
+
+        // Obtener nombre (ajusta según tu estructura)
+        $nombre_usuario = $u['nombre'] ?? 'Usuario';
+
+        // ✨ USAR PLANTILLA PROFESIONAL
+        $html = plantilla_recuperar_contrasena($nombre_usuario, $link);
+
+        // Enviar
+        $okMail = enviar_correo(
+            $u['correo'], 
+            'Recupera tu contraseña - SGRH', 
+            $html
+        );
+
+        if (APP_ENV === 'dev') {
+            $mensaje = 'DEV: Correo guardado en storage/mails/. ' 
+                     . ($okMail ? '✓ OK' : '✗ Error');
+        }
+    }
+}
+
+// ... resto del código igual ...
+?>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASO ADICIONAL: Después de cambiar contraseña (resetear.php)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+En el archivo public/resetear_guardar.php (o donde actualices la contraseña):
+
+<?php
+require_once __DIR__ . '/../includes/mailer.php';
+require_once __DIR__ . '/../includes/mail_templates.php';
+
+// ... después de actualizar contraseña en BD ...
+
+// Enviar confirmación
+$nombre_usuario = $usuario['nombre'] ?? 'Usuario';
+$html = plantilla_contrasena_cambiada($nombre_usuario);
+
+enviar_correo(
+    $usuario['correo'],
+    'Tu contraseña ha sido actualizada - SGRH',
+    $html
+);
+
+// ... continuar con redirect ...
+?>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CAMPOS DE LA BASE DE DATOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Asegúrate que tu tabla 'usuarios' tenga:
+  • correo         (varchar) - Correo del usuario
+  • nombre         (varchar) - Nombre completo
+  • usuario_id     (int)     - ID único
+  • estatus        (varchar) - 'activo', 'inactivo', etc.
+  • reset_token    (varchar) - Token de recuperación
+  • reset_expira   (datetime) - Expiración del token
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PERSONALIZAR PLANTILLA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Edita includes/mail_templates.php para:
+  • Cambiar colores (busca #667eea)
+  • Agregar logo de tu empresa
+  • Cambiar textos y mensajes
+  • Agregar firma personalizada
+  • Incluir información de contacto
+
+Ejemplo:
+  En la función plantilla_recuperar_contrasena(), busca:
+    <img src="https://tudominio.com/logo.png" alt="Logo">
+  
+  O en los colores:
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    
+  Cámbialos a los de tu empresa.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PRUEBA ANTES DE PRODUCCIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Accede a: http://localhost/sgrh/public/test_mailer.php
+2. Selecciona: "Recuperación de Contraseña"
+3. Ingresa tu email
+4. Envía una prueba
+5. Revisa el correo en tu bandeja
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+¿PROBLEMAS?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Verifica:
+  ✓ Que mail_config.php esté configurado con credenciales de Titan
+  ✓ Que PHPMailer esté instalado (composer update)
+  ✓ Que OpenSSL esté habilitado en PHP
+  ✓ Que el directorio storage/ exista y sea escribible
+
+Usa: http://localhost/sgrh/public/diagnostico_correos.php
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-->

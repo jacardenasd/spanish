@@ -35,8 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $okMail = enviar_correo($u['correo'], 'Restablecer contraseña | SGRH', $html);
 
-        if (APP_ENV === 'dev') {
-            $mensaje = 'DEV: correo generado en /storage/mails. Resultado: ' . ($okMail ? 'OK' : 'FALLÓ');
+        
+        //if (APP_ENV === 'dev') {
+        //    $mensaje .= '<br><small class="text-muted">DEV: correo guardado en /storage/mails (' . ($okMail ? 'OK' : 'FALLÓ') . ')</small>';
+        //}
+        
+        // Si falla el envío, registrar en log pero mostrar mensaje genérico
+        if (!$okMail) {
+            @error_log('[SGRH] Error al enviar correo de recuperación para: ' . $rfc);
         }
 
 
@@ -67,7 +73,7 @@ include __DIR__ . '/../includes/layout/head.php';
             <?php endif; ?>
 
             <div class="form-group">
-              <input type="text" name="rfc" class="form-control" placeholder="RFC (10)" maxlength="10" required>
+              <input type="text" name="rfc" class="form-control" placeholder="RFC (10)" maxlength="10" style="text-transform: uppercase;" autocomplete="off" required>
             </div>
 
             <div class="form-group">

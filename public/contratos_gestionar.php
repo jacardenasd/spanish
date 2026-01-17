@@ -181,45 +181,51 @@ if ($nuevo_ingreso_id > 0) {
         die('Error: Empleado no encontrado');
     }
     
-    // Mapear datos de empleados a formato de empleados_nuevo_ingreso
+    // Intentar cargar datos demográficos existentes
+    $sqlDemo = "SELECT * FROM empleados_demograficos WHERE empleado_id = :e LIMIT 1";
+    $stDemo = $pdo->prepare($sqlDemo);
+    $stDemo->execute(array(':e' => $empleado_id));
+    $empDemo = $stDemo->fetch(PDO::FETCH_ASSOC);
+    
+    // Mapear datos de empleados + demograficos a formato de empleados_nuevo_ingreso
     $empDatos = array(
         'empleado_id' => $empBase['empleado_id'],
         'empresa_id' => $empBase['empresa_id'],
         'rfc' => $empBase['rfc_base'],
         'curp' => $empBase['curp'] ?: '',
-        'nss' => '',
+        'nss' => $empDemo ? ($empDemo['nss'] ?: '') : '',
         'nombre' => $empBase['nombre'],
         'apellido_paterno' => $empBase['apellido_paterno'] ?: '',
         'apellido_materno' => $empBase['apellido_materno'] ?: '',
         'fecha_alta' => $empBase['fecha_ingreso'] ?: date('Y-m-d'),
-        'sueldo_diario' => $empBase['salario_diario'] ?: 0,
-        'sueldo_mensual' => $empBase['salario_mensual'] ?: 0,
+        'sueldo_diario' => $empDemo ? ($empDemo['sueldo_diario'] ?: $empBase['salario_diario']) : ($empBase['salario_diario'] ?: 0),
+        'sueldo_mensual' => $empDemo ? ($empDemo['sueldo_mensual'] ?: $empBase['salario_mensual']) : ($empBase['salario_mensual'] ?: 0),
         'puesto_nombre' => $empBase['puesto_nombre'] ?: '',
-        'datos_completos' => 0,
-        'sexo' => '',
-        'fecha_nacimiento' => '',
-        'nacionalidad' => '',
-        'lugar_nacimiento' => '',
-        'domicilio_calle' => '',
-        'domicilio_num_ext' => '',
-        'domicilio_num_int' => '',
-        'domicilio_cp' => '',
-        'domicilio_estado' => '',
-        'domicilio_municipio' => '',
-        'domicilio_colonia' => '',
-        'apoderado_legal_id' => 0,
-        'tipo_nomina' => '',
-        'sueldo_integrado' => 0,
-        'banco_id' => 0,
-        'numero_cuenta' => '',
-        'clabe' => '',
-        'correo_empresa' => '',
-        'correo_personal' => '',
-        'escolaridad_id' => 0,
-        'telefono_personal' => '',
-        'telefono_empresa' => '',
-        'unidad_medica_familiar' => '',
-        'tiene_credito_infonavit' => ''
+        'datos_completos' => $empDemo ? ($empDemo['datos_completos'] ?: 0) : 0,
+        'sexo' => $empDemo ? ($empDemo['sexo'] ?: '') : '',
+        'fecha_nacimiento' => $empDemo ? ($empDemo['fecha_nacimiento'] ?: '') : '',
+        'nacionalidad' => $empDemo ? ($empDemo['nacionalidad'] ?: '') : '',
+        'lugar_nacimiento' => $empDemo ? ($empDemo['lugar_nacimiento'] ?: '') : '',
+        'domicilio_calle' => $empDemo ? ($empDemo['domicilio_calle'] ?: '') : '',
+        'domicilio_num_ext' => $empDemo ? ($empDemo['domicilio_num_ext'] ?: '') : '',
+        'domicilio_num_int' => $empDemo ? ($empDemo['domicilio_num_int'] ?: '') : '',
+        'domicilio_cp' => $empDemo ? ($empDemo['domicilio_cp'] ?: '') : '',
+        'domicilio_estado' => $empDemo ? ($empDemo['domicilio_estado'] ?: '') : '',
+        'domicilio_municipio' => $empDemo ? ($empDemo['domicilio_municipio'] ?: '') : '',
+        'domicilio_colonia' => $empDemo ? ($empDemo['domicilio_colonia'] ?: '') : '',
+        'apoderado_legal_id' => $empDemo ? ($empDemo['apoderado_legal_id'] ?: 0) : 0,
+        'tipo_nomina' => $empDemo ? ($empDemo['tipo_nomina'] ?: '') : '',
+        'sueldo_integrado' => $empDemo ? ($empDemo['sueldo_integrado'] ?: 0) : 0,
+        'banco_id' => $empDemo ? ($empDemo['banco_id'] ?: 0) : 0,
+        'numero_cuenta' => $empDemo ? ($empDemo['numero_cuenta'] ?: '') : '',
+        'clabe' => $empDemo ? ($empDemo['clabe'] ?: '') : '',
+        'correo_empresa' => $empDemo ? ($empDemo['correo_empresa'] ?: ($empBase['correo'] ?? '')) : ($empBase['correo'] ?? ''),
+        'correo_personal' => $empDemo ? ($empDemo['correo_personal'] ?: '') : '',
+        'escolaridad_id' => $empDemo ? ($empDemo['escolaridad_id'] ?: 0) : 0,
+        'telefono_personal' => $empDemo ? ($empDemo['telefono_personal'] ?: ($empBase['telefono'] ?? '')) : ($empBase['telefono'] ?? ''),
+        'telefono_empresa' => $empDemo ? ($empDemo['telefono_empresa'] ?: '') : '',
+        'unidad_medica_familiar' => $empDemo ? ($empDemo['unidad_medica_familiar'] ?: '') : '',
+        'tiene_credito_infonavit' => $empDemo ? ($empDemo['tiene_credito_infonavit'] ?: '') : ''
     );
     $es_nuevo_ingreso = false;
 }

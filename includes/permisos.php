@@ -50,8 +50,34 @@ function can($permiso_clave) {
     return !empty($p[$permiso_clave]);
 }
 
+function can_any(array $permiso_claves) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $p = $_SESSION['permisos'] ?? [];
+
+    if (!empty($p['*'])) {
+        return true;
+    }
+
+    foreach ($permiso_claves as $clave) {
+        if (!empty($p[$clave])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function require_perm($permiso_clave) {
     if (!can($permiso_clave)) {
+        header('Location: sin_permiso.php');
+        exit;
+    }
+}
+
+function require_perm_any(array $permiso_claves) {
+    if (!can_any($permiso_claves)) {
         header('Location: sin_permiso.php');
         exit;
     }

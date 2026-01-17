@@ -14,7 +14,7 @@ require_empresa();
 require_password_change_redirect();
 require_demograficos_redirect();
 
-if (!can('organizacion.admin')) {
+if (!can('organizacion.admin') && !can('clima.admin')) {
     http_response_code(403);
     die('<div class="alert alert-danger">No tienes permisos para acceder a esta sección.</div>');
 }
