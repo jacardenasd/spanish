@@ -416,7 +416,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       <h5 class="card-title">Mis Planes de Acción</h5>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover datatable-basic">
+      <table class="table datatable-basic">
         <thead>
           <tr>
             <th>Periodo</th>

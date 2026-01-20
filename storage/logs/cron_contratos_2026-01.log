@@ -1,0 +1,38 @@
+[2026-01-20 09:31:51] ========== INICIO CRON CONTRATOS TEMPORALES ==========
+[2026-01-20 09:31:51] --- Sincronizando empleados nuevos sin datos demográficos ---
+[2026-01-20 09:31:51] No hay empleados nuevos sin datos demográficos
+[2026-01-20 09:31:51] --- Buscando contratos temporales próximos a vencer (5 días) ---
+[2026-01-20 09:31:51] ERROR CRÍTICO: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'emp.nombre_comercial' in 'field list'
+[2026-01-20 09:31:51] Stack trace: #0 C:\MAMP\htdocs\sgrh\cron_contratos_temporales.php(155): PDO->prepare('\r\n        SELEC...')
+#1 {main}
+[2026-01-20 09:31:51] ========== FIN CRON - CON ERRORES ==========
+
+[2026-01-20 09:32:08] ========== INICIO CRON CONTRATOS TEMPORALES ==========
+[2026-01-20 09:32:08] --- Sincronizando empleados nuevos sin datos demográficos ---
+[2026-01-20 09:32:08] No hay empleados nuevos sin datos demográficos
+[2026-01-20 09:32:08] --- Buscando contratos temporales próximos a vencer (5 días) ---
+[2026-01-20 09:32:08] ERROR CRÍTICO: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'emp.nombre_comercial' in 'field list'
+[2026-01-20 09:32:08] Stack trace: #0 C:\MAMP\htdocs\sgrh\cron_contratos_temporales.php(155): PDO->prepare('\r\n        SELEC...')
+#1 {main}
+[2026-01-20 09:32:08] ========== FIN CRON - CON ERRORES ==========
+
+[2026-01-20 09:32:43] ========== INICIO CRON CONTRATOS TEMPORALES ==========
+[2026-01-20 09:32:43] --- Sincronizando empleados nuevos sin datos demográficos ---
+[2026-01-20 09:32:43] No hay empleados nuevos sin datos demográficos
+[2026-01-20 09:32:43] --- Buscando contratos temporales próximos a vencer (5 días) ---
+[2026-01-20 09:32:43] No hay contratos temporales por vencer en 5 días
+[2026-01-20 09:32:43] --- Actualizando contratos vencidos ---
+[2026-01-20 09:32:43] No hay contratos vencidos para actualizar
+[2026-01-20 09:32:43] --- Estadísticas ---
+[2026-01-20 09:32:43] ========== FIN CRON - EJECUCIÓN EXITOSA ==========
+
+[2026-01-20 09:37:17] ========== INICIO CRON CONTRATOS TEMPORALES ==========
+[2026-01-20 09:37:17] --- Sincronizando empleados nuevos sin datos demográficos ---
+[2026-01-20 09:37:17] No hay empleados nuevos sin datos demográficos
+[2026-01-20 09:37:17] --- Buscando contratos temporales próximos a vencer (5 días) ---
+[2026-01-20 09:37:17] No hay contratos temporales por vencer en 5 días
+[2026-01-20 09:37:17] --- Actualizando contratos vencidos ---
+[2026-01-20 09:37:17] No hay contratos vencidos para actualizar
+[2026-01-20 09:37:17] --- Estadísticas ---
+[2026-01-20 09:37:17] ========== FIN CRON - EJECUCIÓN EXITOSA ==========
+

@@ -207,7 +207,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover">
+      <table class="table">
         <thead>
           <tr>
             <th style="width:60px;">ID</th>
@@ -259,7 +259,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover" id="tableReactivos">
+      <table class="table" id="tableReactivos">
         <thead>
           <tr>
             <th style="width:60px;">ID</th>

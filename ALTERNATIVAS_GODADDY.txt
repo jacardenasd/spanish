@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+/**
+ * ALTERNATIVA: Si Puerto 587 no funciona en GoDaddy
+ * Usa el relay SMTP sin autenticación
+ * 
+ * Reemplaza el contenido de mail_config.php con esto:
+ */
+
+// OPCIÓN 1: Puerto 587 con STARTTLS (TLS)
+echo "=== OPCIÓN 1: Puerto 587 (recomendado) ===\n";
+echo "define('SMTP_HOST', 'smtpout.secureserver.net');\n";
+echo "define('SMTP_PORT', 587);\n";
+echo "define('SMTP_SECURE', 'tls');\n";
+echo "define('SMTP_USERNAME', 'contacto@rhfarma.mx');\n";
+echo "define('SMTP_PASSWORD', 'Card3n4x!Mx2025');\n\n";
+
+// OPCIÓN 2: Relay SMTP sin autenticación (Puerto 25)
+echo "=== OPCIÓN 2: Relay sin autenticación (Puerto 25) ===\n";
+echo "define('SMTP_HOST', 'relay-hosting.secureserver.net');\n";
+echo "define('SMTP_PORT', 25);\n";
+echo "define('SMTP_SECURE', false);\n";
+echo "define('SMTP_USERNAME', '');\n";
+echo "define('SMTP_PASSWORD', '');\n\n";
+
+// OPCIÓN 3: Relay alternativo (Puerto 2525)
+echo "=== OPCIÓN 3: Puerto 2525 alternativo ===\n";
+echo "define('SMTP_HOST', 'smtpout.secureserver.net');\n";
+echo "define('SMTP_PORT', 2525);\n";
+echo "define('SMTP_SECURE', false);\n";
+echo "define('SMTP_USERNAME', 'contacto@rhfarma.mx');\n";
+echo "define('SMTP_PASSWORD', 'Card3n4x!Mx2025');\n";

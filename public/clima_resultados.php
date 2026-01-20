@@ -370,7 +370,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       <span class="text-muted">Solo se muestran direcciones con resultados publicados. Haz clic en una fila para ver detalles por dimensión.</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover" id="tableResultados">
+      <table class="table" id="tableResultados">
         <thead>
           <tr>
             <th style="width: 50px;">#</th>

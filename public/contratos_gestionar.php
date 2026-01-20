@@ -29,93 +29,98 @@ $accion = isset($_POST['accion']) ? (string)$_POST['accion'] : '';
 if ($accion === 'guardar_datos_empleado') {
     header('Content-Type: application/json; charset=utf-8');
     
-    $campos = array(
-        'nombre' => '', 'apellido_paterno' => '', 'apellido_materno' => '', 'sexo' => '',
-        'fecha_nacimiento' => '', 'nacionalidad' => '', 'lugar_nacimiento' => '',
-        'rfc' => '', 'curp' => '', 'nss' => '',
-        'domicilio_calle' => '', 'domicilio_num_ext' => '', 'domicilio_num_int' => '',
-        'domicilio_cp' => '', 'domicilio_estado' => '', 'domicilio_municipio' => '', 'domicilio_colonia' => '',
-        'apoderado_legal_id' => 0, 'fecha_alta' => '', 'tipo_nomina' => '',
-        'sueldo_diario' => 0.0, 'sueldo_mensual' => 0.0, 'sueldo_integrado' => 0.0,
-        'banco_id' => 0, 'numero_cuenta' => '', 'clabe' => '',
-        'correo_empresa' => '', 'correo_personal' => '', 'escolaridad_id' => 0,
-        'telefono_personal' => '', 'telefono_empresa' => '',
-        'unidad_medica_familiar' => '', 'tiene_credito_infonavit' => ''
-    );
-    
-    foreach ($campos as $campo => &$valor) {
-        if (isset($_POST[$campo])) {
-            if (in_array($campo, array('apoderado_legal_id', 'banco_id', 'escolaridad_id'), true)) {
-                $valor = (int)$_POST[$campo];
-            } elseif (in_array($campo, array('sueldo_diario', 'sueldo_mensual', 'sueldo_integrado'), true)) {
-                $valor = (float)$_POST[$campo];
-            } else {
-                $valor = (string)$_POST[$campo];
+    try {
+        $campos = array(
+            'nombre' => '', 'apellido_paterno' => '', 'apellido_materno' => '', 'sexo' => '',
+            'fecha_nacimiento' => '', 'nacionalidad' => '', 'lugar_nacimiento' => '',
+            'rfc' => '', 'curp' => '', 'nss' => '',
+            'domicilio_calle' => '', 'domicilio_num_ext' => '', 'domicilio_num_int' => '',
+            'domicilio_cp' => '', 'domicilio_estado' => '', 'domicilio_municipio' => '', 'domicilio_colonia' => '',
+            'apoderado_legal_id' => 0, 'fecha_alta' => '', 'tipo_nomina' => '',
+            'sueldo_diario' => 0.0, 'sueldo_mensual' => 0.0, 'sueldo_integrado' => 0.0,
+            'banco_id' => 0, 'numero_cuenta' => '', 'clabe' => '',
+            'correo_empresa' => '', 'correo_personal' => '', 'escolaridad_id' => 0,
+            'telefono_personal' => '', 'telefono_empresa' => '',
+            'unidad_medica_familiar' => '', 'tiene_credito_infonavit' => 0
+        );
+        
+        foreach ($campos as $campo => &$valor) {
+            if (isset($_POST[$campo])) {
+                if (in_array($campo, array('apoderado_legal_id', 'banco_id', 'escolaridad_id', 'tiene_credito_infonavit'), true)) {
+                    $valor = (int)$_POST[$campo];
+                } elseif (in_array($campo, array('sueldo_diario', 'sueldo_mensual', 'sueldo_integrado'), true)) {
+                    $valor = (float)$_POST[$campo];
+                } else {
+                    $valor = (string)$_POST[$campo];
+                }
             }
         }
-    }
-    
-    $datosCompletos = (!empty($campos['rfc']) && !empty($campos['curp']) && !empty($campos['nss']) && 
-                       $campos['sueldo_mensual'] > 0 && $campos['banco_id'] > 0) ? 1 : 0;
-    
-    // Determinar tabla y WHERE según el tipo de empleado
-    if ($nuevo_ingreso_id > 0) {
-        // Nuevo ingreso
-        $sqlUpsert = "UPDATE empleados_nuevo_ingreso SET
-                        nombre = :nombre, apellido_paterno = :ap, apellido_materno = :am, sexo = :sexo, 
-                        fecha_nacimiento = :fn, nacionalidad = :nac, lugar_nacimiento = :ln, rfc = :rfc, curp = :curp, nss = :nss,
-                        domicilio_calle = :dcalle, domicilio_num_ext = :dnext, domicilio_num_int = :dnint,
-                        domicilio_cp = :dcp, domicilio_estado = :dest, domicilio_municipio = :dmun, domicilio_colonia = :dcol,
-                        apoderado_legal_id = :apod, fecha_alta = :falta, tipo_nomina = :tnomina,
-                        sueldo_diario = :sdiario, sueldo_mensual = :smensual, sueldo_integrado = :sintegrado,
-                        banco_id = :banco, numero_cuenta = :ncta, clabe = :clabe, correo_empresa = :cemp,
-                        correo_personal = :cpers, escolaridad_id = :esc, telefono_personal = :tpers,
-                        telefono_empresa = :temp, unidad_medica_familiar = :umf, tiene_credito_infonavit = :infonavit,
-                        datos_completos = :completo, estatus = 'en_proceso', fecha_actualizacion = NOW()
-                      WHERE nuevo_ingreso_id = :nid AND empresa_id = :emp";
-        $bindParams = array(':nid' => $nuevo_ingreso_id, ':emp' => $empresa_id);
-    } else {
-        // Empleado activo -> actualizar empleados_demograficos
-        $sqlUpsert = "UPDATE empleados_demograficos SET
-                        nombre = :nombre, apellido_paterno = :ap, apellido_materno = :am, sexo = :sexo, 
-                        fecha_nacimiento = :fn, nacionalidad = :nac, lugar_nacimiento = :ln, rfc = :rfc, curp = :curp, nss = :nss,
-                        domicilio_calle = :dcalle, domicilio_num_ext = :dnext, domicilio_num_int = :dnint,
-                        domicilio_cp = :dcp, domicilio_estado = :dest, domicilio_municipio = :dmun, domicilio_colonia = :dcol,
-                        apoderado_legal_id = :apod, fecha_alta = :falta, tipo_nomina = :tnomina,
-                        sueldo_diario = :sdiario, sueldo_mensual = :smensual, sueldo_integrado = :sintegrado,
-                        banco_id = :banco, numero_cuenta = :ncta, clabe = :clabe, correo_empresa = :cemp,
-                        correo_personal = :cpers, escolaridad_id = :esc, telefono_personal = :tpers,
-                        telefono_empresa = :temp, unidad_medica_familiar = :umf, tiene_credito_infonavit = :infonavit,
-                        datos_completos = :completo, fecha_actualizacion = NOW()
-                      WHERE empleado_id = :eid";
-        $bindParams = array(':eid' => $empleado_id);
-    }
-    
-    $bindParams = array_merge($bindParams, array(
-        ':nombre' => $campos['nombre'], ':ap' => $campos['apellido_paterno'],
-        ':am' => $campos['apellido_materno'], ':sexo' => $campos['sexo'], ':fn' => $campos['fecha_nacimiento'],
-        ':nac' => $campos['nacionalidad'], ':ln' => $campos['lugar_nacimiento'], ':rfc' => $campos['rfc'],
-        ':curp' => $campos['curp'], ':nss' => $campos['nss'], ':dcalle' => $campos['domicilio_calle'],
-        ':dnext' => $campos['domicilio_num_ext'], ':dnint' => $campos['domicilio_num_int'],
-        ':dcp' => $campos['domicilio_cp'], ':dest' => $campos['domicilio_estado'],
-        ':dmun' => $campos['domicilio_municipio'], ':dcol' => $campos['domicilio_colonia'],
-        ':apod' => $campos['apoderado_legal_id'], ':falta' => $campos['fecha_alta'],
-        ':tnomina' => $campos['tipo_nomina'], ':sdiario' => $campos['sueldo_diario'],
-        ':smensual' => $campos['sueldo_mensual'], ':sintegrado' => $campos['sueldo_integrado'],
-        ':banco' => $campos['banco_id'], ':ncta' => $campos['numero_cuenta'], ':clabe' => $campos['clabe'],
-        ':cemp' => $campos['correo_empresa'], ':cpers' => $campos['correo_personal'],
-        ':esc' => $campos['escolaridad_id'], ':tpers' => $campos['telefono_personal'],
-        ':temp' => $campos['telefono_empresa'], ':umf' => $campos['unidad_medica_familiar'],
-        ':infonavit' => $campos['tiene_credito_infonavit'], ':completo' => $datosCompletos
-    ));
-    
-    $stUpsert = $pdo->prepare($sqlUpsert);
-    $result = $stUpsert->execute($bindParams);
-    
-    if ($result) {
-        echo json_encode(array('ok' => true, 'mensaje' => 'Datos guardados', 'datos_completos' => $datosCompletos));
-    } else {
-        echo json_encode(array('ok' => false, 'error' => 'Error al guardar'));
+        
+        $datosCompletos = (!empty($campos['rfc']) && !empty($campos['curp']) && !empty($campos['nss']) && 
+                           $campos['sueldo_mensual'] > 0 && $campos['banco_id'] > 0) ? 1 : 0;
+        
+        // Determinar tabla y WHERE según el tipo de empleado
+        if ($nuevo_ingreso_id > 0) {
+            // Nuevo ingreso
+            $sqlUpsert = "UPDATE empleados_nuevo_ingreso SET
+                            nombre = :nombre, apellido_paterno = :ap, apellido_materno = :am, sexo = :sexo, 
+                            fecha_nacimiento = :fn, nacionalidad = :nac, lugar_nacimiento = :ln, rfc = :rfc, curp = :curp, nss = :nss,
+                            domicilio_calle = :dcalle, domicilio_num_ext = :dnext, domicilio_num_int = :dnint,
+                            domicilio_cp = :dcp, domicilio_estado = :dest, domicilio_municipio = :dmun, domicilio_colonia = :dcol,
+                            apoderado_legal_id = :apod, fecha_alta = :falta, tipo_nomina = :tnomina,
+                            sueldo_diario = :sdiario, sueldo_mensual = :smensual, sueldo_integrado = :sintegrado,
+                            banco_id = :banco, numero_cuenta = :ncta, clabe = :clabe, correo_empresa = :cemp,
+                            correo_personal = :cpers, escolaridad_id = :esc, telefono_personal = :tpers,
+                            telefono_empresa = :temp, unidad_medica_familiar = :umf, tiene_credito_infonavit = :infonavit,
+                            datos_completos = :completo, estatus = 'en_proceso', fecha_actualizacion = NOW()
+                          WHERE nuevo_ingreso_id = :nid AND empresa_id = :emp";
+            $bindParams = array(':nid' => $nuevo_ingreso_id, ':emp' => $empresa_id);
+        } else {
+            // Empleado activo -> actualizar empleados_demograficos
+            $sqlUpsert = "UPDATE empleados_demograficos SET
+                            nombre = :nombre, apellido_paterno = :ap, apellido_materno = :am, sexo = :sexo, 
+                            fecha_nacimiento = :fn, nacionalidad = :nac, lugar_nacimiento = :ln, rfc = :rfc, curp = :curp, nss = :nss,
+                            domicilio_calle = :dcalle, domicilio_num_ext = :dnext, domicilio_num_int = :dnint,
+                            domicilio_cp = :dcp, domicilio_estado = :dest, domicilio_municipio = :dmun, domicilio_colonia = :dcol,
+                            apoderado_legal_id = :apod, fecha_alta = :falta, tipo_nomina = :tnomina,
+                            sueldo_diario = :sdiario, sueldo_mensual = :smensual, sueldo_integrado = :sintegrado,
+                            banco_id = :banco, numero_cuenta = :ncta, clabe = :clabe, correo_empresa = :cemp,
+                            correo_personal = :cpers, escolaridad_id = :esc, telefono_personal = :tpers,
+                            telefono_empresa = :temp, unidad_medica_familiar = :umf, tiene_credito_infonavit = :infonavit,
+                            datos_completos = :completo, updated_at = NOW()
+                          WHERE empleado_id = :eid";
+            $bindParams = array(':eid' => $empleado_id);
+        }
+        
+        $bindParams = array_merge($bindParams, array(
+            ':nombre' => $campos['nombre'], ':ap' => $campos['apellido_paterno'],
+            ':am' => $campos['apellido_materno'], ':sexo' => $campos['sexo'], ':fn' => $campos['fecha_nacimiento'],
+            ':nac' => $campos['nacionalidad'], ':ln' => $campos['lugar_nacimiento'], ':rfc' => $campos['rfc'],
+            ':curp' => $campos['curp'], ':nss' => $campos['nss'], ':dcalle' => $campos['domicilio_calle'],
+            ':dnext' => $campos['domicilio_num_ext'], ':dnint' => $campos['domicilio_num_int'],
+            ':dcp' => $campos['domicilio_cp'], ':dest' => $campos['domicilio_estado'],
+            ':dmun' => $campos['domicilio_municipio'], ':dcol' => $campos['domicilio_colonia'],
+            ':apod' => $campos['apoderado_legal_id'], ':falta' => $campos['fecha_alta'],
+            ':tnomina' => $campos['tipo_nomina'], ':sdiario' => $campos['sueldo_diario'],
+            ':smensual' => $campos['sueldo_mensual'], ':sintegrado' => $campos['sueldo_integrado'],
+            ':banco' => $campos['banco_id'], ':ncta' => $campos['numero_cuenta'], ':clabe' => $campos['clabe'],
+            ':cemp' => $campos['correo_empresa'], ':cpers' => $campos['correo_personal'],
+            ':esc' => $campos['escolaridad_id'], ':tpers' => $campos['telefono_personal'],
+            ':temp' => $campos['telefono_empresa'], ':umf' => $campos['unidad_medica_familiar'],
+            ':infonavit' => $campos['tiene_credito_infonavit'], ':completo' => $datosCompletos
+        ));
+        
+        $stUpsert = $pdo->prepare($sqlUpsert);
+        $result = $stUpsert->execute($bindParams);
+        
+        if ($result) {
+            echo json_encode(array('ok' => true, 'mensaje' => 'Datos guardados', 'datos_completos' => $datosCompletos));
+        } else {
+            $errorInfo = $stUpsert->errorInfo();
+            echo json_encode(array('ok' => false, 'error' => 'Error al guardar: ' . $errorInfo[2]));
+        }
+    } catch (Exception $e) {
+        echo json_encode(array('ok' => false, 'error' => 'Error: ' . $e->getMessage()));
     }
     exit;
 }
@@ -332,7 +337,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       
       <?php if (count($documentos) > 0): ?>
         <div class="table-responsive">
-          <table class="table table-sm table-hover">
+          <table class="table table-sm">
             <thead>
               <tr>
                 <th>Tipo de Documento</th>
@@ -541,9 +546,8 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
               <div class="form-group"><label>Tipo Nómina</label>
                 <select name="tipo_nomina" class="form-control">
                   <option value="">-</option>
-                  <option value="Semanal" <?php echo ($empDatos['tipo_nomina'] ?? '') === 'Semanal' ? 'selected' : ''; ?>>Semanal</option>
-                  <option value="Quincenal" <?php echo ($empDatos['tipo_nomina'] ?? '') === 'Quincenal' ? 'selected' : ''; ?>>Quincenal</option>
-                  <option value="Mensual" <?php echo ($empDatos['tipo_nomina'] ?? '') === 'Mensual' ? 'selected' : ''; ?>>Mensual</option>
+                  <option value="SEMANAL" <?php echo ($empDatos['tipo_nomina'] ?? '') === 'SEMANAL' ? 'selected' : ''; ?>>Semanal</option>
+                  <option value="QUINCENAL" <?php echo ($empDatos['tipo_nomina'] ?? '') === 'QUINCENAL' ? 'selected' : ''; ?>>Quincenal</option>
                 </select>
               </div>
             </div>
@@ -639,9 +643,8 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
             <div class="col-md-3">
               <div class="form-group"><label>Crédito INFONAVIT</label>
                 <select name="tiene_credito_infonavit" class="form-control">
-                  <option value="">-</option>
-                  <option value="S" <?php echo ($empDatos['tiene_credito_infonavit'] ?? '') === 'S' ? 'selected' : ''; ?>>Sí</option>
-                  <option value="N" <?php echo ($empDatos['tiene_credito_infonavit'] ?? '') === 'N' ? 'selected' : ''; ?>>No</option>
+                  <option value="0">No</option>
+                  <option value="1" <?php echo ($empDatos['tiene_credito_infonavit'] ?? 0) == 1 ? 'selected' : ''; ?>>Sí</option>
                 </select>
               </div>
             </div>

@@ -18,5 +18,6 @@ define('PUBLIC_PATH', BASE_PATH . '/public');
 date_default_timezone_set('America/Mexico_City');
 define('ASSET_BASE', '/sgrh/'); 
 
-require_once __DIR__ . '/../vendor/autoload.php';
+// Ejecutar migraciones si es necesario
+require_once __DIR__ . '/migrations.php';require_once __DIR__ . '/../vendor/autoload.php';
 

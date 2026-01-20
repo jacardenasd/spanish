@@ -1,19 +1,21 @@
 <?php
 /**
  * Configuración de envío de correos con PHPMailer
- * Para: Office 365 / Microsoft 365
+ * Para: GoDaddy - Relay SMTP sin autenticación
+ * Basado en configuración probada y funcional
  */
 
 // Configuración SMTP para GoDaddy Relay
-define('MAIL_DRIVER', 'smtp'); // 'smtp' o 'mail'
+define('MAIL_DRIVER', 'smtp');
 
-// SMTP (GoDaddy Relay - compatible con Office 365)
-define('SMTP_HOST', 'smtpout.secureserver.net'); // Relay SMTP de GoDaddy
-define('SMTP_PORT', 465); // Puerto sin encriptación
-define('SMTP_SECURE', ''); // Sin TLS/SSL
+// SMTP (GoDaddy Relay) - Configuración probada y funcional
+define('SMTP_HOST', 'smtpout.secureserver.net'); // Servidor SMTP de GoDaddy
+define('SMTP_PORT', 465); // Puerto SSL
+define('SMTP_SECURE', ''); // Sin TLS/SSL (relay sin encriptación)
 
-define('SMTP_USERNAME', 'contacto@rhfarma.mx'); // Tu correo de Office 365
-define('SMTP_PASSWORD', 'Card3n4x!Mx2025'); // Contraseña de Office 365
+// IMPORTANTE: SMTPAuth debe ser FALSE para GoDaddy Relay
+define('SMTP_USERNAME', 'contacto@rhfarma.mx'); // Se incluye pero no se usa
+define('SMTP_PASSWORD', 'Card3n4x!Mx2025'); // Se incluye pero no se usa
 
 // Información del remitente
 define('MAIL_FROM_ADDRESS', 'contacto@rhfarma.mx');

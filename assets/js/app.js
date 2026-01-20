@@ -6,11 +6,14 @@
  *
  * ---------------------------------------------------------------------------- */
 
+console.log('✅ app.js cargado');
 
 // Setup module
 // ------------------------------
 
 const App = function () {
+
+    console.log('✅ App() inicializado');
 
 
     // Utils
@@ -58,12 +61,15 @@ const App = function () {
     // Resize main sidebar
     const sidebarMainResize = function() {
 
+        console.log('🔧 sidebarMainResize() inicializado');
+
         // Elements
         const sidebarMainElement = $('.sidebar-main'),
               sidebarMainToggler = $('.sidebar-main-resize'),
               resizeClass = 'sidebar-main-resized',
               unfoldClass = 'sidebar-main-unfold';
 
+        console.log('Botones encontrados:', sidebarMainToggler.length);
 
         // Define variables
         const unfoldDelay = 150;
@@ -74,6 +80,34 @@ const App = function () {
         sidebarMainToggler.on('click', function(e) {
             sidebarMainElement.toggleClass(resizeClass);
             !sidebarMainElement.hasClass(resizeClass) && sidebarMainElement.removeClass(unfoldClass);
+            
+            // Guardar estado
+            const isResized = sidebarMainElement.hasClass(resizeClass);
+            const state = isResized ? 'resized' : 'normal';
+            
+            console.log('Guardando estado del sidebar:', state);
+            
+            // Guardar en localStorage (inmediato)
+            localStorage.setItem('sidebarMainState', state);
+            
+            // Sincronizar con la BD (asíncrono)
+            const apiUrl = (window.ASSET_BASE || '/sgrh/') + 'public/api_sidebar_state.php';
+            console.log('URL API:', apiUrl);
+            
+            $.ajax({
+                url: apiUrl,
+                type: 'POST',
+                data: {
+                    action: 'save',
+                    state: state
+                },
+                success: function(response) {
+                    console.log('Estado guardado en BD:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al guardar estado:', error, xhr.responseText);
+                }
+            });
         });
 
         // Add class on mouse enter
@@ -93,6 +127,7 @@ const App = function () {
         });
     };
 
+
     // Toggle main sidebar
     const sidebarMainToggle = function() {
 
@@ -108,6 +143,10 @@ const App = function () {
         sidebarMainDesktopToggler.on('click', function(e) {
             e.preventDefault();
             sidebarMainElement.toggleClass(sidebarCollapsedClass);
+            // Guardar estado en sessionStorage
+            const isCollapsed = sidebarMainElement.hasClass(sidebarCollapsedClass);
+            sessionStorage.setItem('sidebarMainCollapsed', isCollapsed ? '1' : '0');
+            console.log('Sidebar collapsed saved:', isCollapsed);
         });                
 
         // On mobile

@@ -114,7 +114,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       <span class="badge badge-primary"><?php echo count($empleados); ?> registros</span>
     </div>
     <div class="card-body">
-      <table class="table table-sm table-hover datatable-basic">
+      <table class="table table-sm datatable-basic">
         <thead class="bg-light">
           <tr>
             <th>Nombre</th>
@@ -127,7 +127,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
         </thead>
         <tbody>
           <?php if (count($empleados) === 0): ?>
-            <tr><td colspan="7" class="text-center text-muted py-4">Sin empleados de nuevo ingreso</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">Sin empleados de nuevo ingreso</td></tr>
           <?php else: foreach ($empleados as $emp): ?>
             <?php
               // Verificar si hay contratos generados a partir de este nuevo_ingreso
@@ -223,19 +223,9 @@ $(function() {
   $('.datatable-basic').DataTable({
     columnDefs: [{
       orderable: false,
-      targets: [6]
+      targets: [5]
     }],
-    displayLength: 10,
-    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
-    language: {
-      search: '_INPUT_',
-      searchPlaceholder: 'Buscar...',
-      processing: 'Procesando...',
-      paginate: { first: 'Primero', last: 'Último', next: 'Siguiente', previous: 'Anterior' },
-      info: 'Mostrando _START_ a _END_ de _TOTAL_ registros'
-    },
-    dom: '<"datatable-header"<"DTS_length_wrapper"><"DTS_search_wrapper">l>t<"datatable-footer"<"DTS_pagination_wrapper">p>',
-    lengthChange: false
+    displayLength: 10
   });
 
   // Variables para mantener estado del modal

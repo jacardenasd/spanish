@@ -281,7 +281,7 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
       <h5 class="card-title">Planes de acción registrados</h5>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover" id="tablePlanes">
+      <table class="table" id="tablePlanes">
         <thead>
           <tr>
             <th style="width:60px;">ID</th>

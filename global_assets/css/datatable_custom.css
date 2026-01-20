@@ -1,0 +1,22 @@
+/**
+ * Configuración mínima para DataTables en SGRH
+ * Solo personaliza el DOM y espaciado sin afectar estilos base
+ */
+
+.dataTables_wrapper {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dataTables_wrapper .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  padding: 0.5rem 0;
+}
+
+

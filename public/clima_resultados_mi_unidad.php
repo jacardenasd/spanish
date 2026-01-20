@@ -94,63 +94,169 @@ if ($periodo_id > 0) {
 $dimensiones = $pdo->query("SELECT * FROM clima_dimensiones WHERE activo=1 ORDER BY orden")->fetchAll(PDO::FETCH_ASSOC);
 
 // =======================
-// RESULTADOS MI UNIDAD
+// DATOS GENERALES DE LA ENCUESTA
 // =======================
-$resultados = null;
-$promedios_dimensiones = array();
+$datos_encuesta = array(
+    'universo_aplicable' => 0,
+    'encuestas_respondidas' => 0,
+    'porcentaje_participacion' => 0,
+    'fecha_inicio' => null,
+    'fecha_fin' => null
+);
 
-if ($periodo && $mi_unidad_id > 0) {
-    // Promedio general de mi unidad
-    $sql_mi_unidad = "
+if ($periodo) {
+    // Total de elegibles en la empresa
+    $stmt_uni = $pdo->prepare("
+        SELECT COUNT(DISTINCT empleado_id) as total
+        FROM clima_elegibles
+        WHERE periodo_id = ? AND empresa_id = ? AND elegible = 1
+    ");
+    $stmt_uni->execute([$periodo_id, $empresa_id]);
+    $row_uni = $stmt_uni->fetch(PDO::FETCH_ASSOC);
+    $datos_encuesta['universo_aplicable'] = (int)$row_uni['total'];
+    
+    // Total de respuestas únicas
+    $stmt_resp = $pdo->prepare("
+        SELECT COUNT(DISTINCT cr.empleado_id) as total
+        FROM clima_respuestas cr
+        INNER JOIN clima_elegibles ce ON ce.periodo_id = cr.periodo_id AND ce.empleado_id = cr.empleado_id
+        WHERE cr.periodo_id = ? AND ce.empresa_id = ? AND ce.elegible = 1
+    ");
+    $stmt_resp->execute([$periodo_id, $empresa_id]);
+    $row_resp = $stmt_resp->fetch(PDO::FETCH_ASSOC);
+    $datos_encuesta['encuestas_respondidas'] = (int)$row_resp['total'];
+    
+    // Calcular porcentaje
+    if ($datos_encuesta['universo_aplicable'] > 0) {
+        $datos_encuesta['porcentaje_participacion'] = round(
+            ($datos_encuesta['encuestas_respondidas'] / $datos_encuesta['universo_aplicable']) * 100, 
+            1
+        );
+    }
+    
+    // Fechas del período
+    $datos_encuesta['fecha_inicio'] = $periodo['fecha_inicio'];
+    $datos_encuesta['fecha_fin'] = $periodo['fecha_fin'];
+}
+
+// =======================
+// RESULTADOS POR EMPRESA Y UNIDAD
+// =======================
+$resultados_empresa = null;
+$resultados_unidad = null;
+$promedios_dimensiones_empresa = array();
+$promedios_dimensiones_unidad = array();
+
+if ($periodo) {
+    // =======================
+    // RESULTADOS POR EMPRESA
+    // =======================
+    $sql_empresa = "
         SELECT 
             COUNT(DISTINCT cr.empleado_id) AS total_respondieron,
-            AVG(cr.valor) AS promedio_unidad
+            AVG(cr.valor) AS promedio_empresa
         FROM clima_respuestas cr
         INNER JOIN clima_elegibles ce ON ce.periodo_id = cr.periodo_id AND ce.empleado_id = cr.empleado_id
         WHERE cr.periodo_id = ?
           AND ce.empresa_id = ?
-          AND ce.unidad_id = ?
           AND ce.elegible = 1
     ";
-    $stmt_u = $pdo->prepare($sql_mi_unidad);
-    $stmt_u->execute([$periodo_id, $empresa_id, $mi_unidad_id]);
-    $row_u = $stmt_u->fetch(PDO::FETCH_ASSOC);
+    $stmt_e = $pdo->prepare($sql_empresa);
+    $stmt_e->execute([$periodo_id, $empresa_id]);
+    $row_e = $stmt_e->fetch(PDO::FETCH_ASSOC);
     
-    if ($row_u && (int)$row_u['total_respondieron'] > 0) {
-        $prom_1_5 = (float)$row_u['promedio_unidad'];
+    if ($row_e && (int)$row_e['total_respondieron'] > 0) {
+        $prom_1_5 = (float)$row_e['promedio_empresa'];
         $prom_0_100 = $prom_1_5 > 0 ? (($prom_1_5 - 1) / 4) * 100 : 0.0;
         
-        $resultados = array(
-            'total_respondieron' => (int)$row_u['total_respondieron'],
-            'promedio_unidad' => round($prom_0_100, 2)
+        $resultados_empresa = array(
+            'total_respondieron' => (int)$row_e['total_respondieron'],
+            'promedio_empresa' => round($prom_0_100, 2)
         );
 
-        // Promedios por dimensión
+        // Promedios por dimensión - Empresa
         foreach ($dimensiones as $dim) {
             $did = (int)$dim['dimension_id'];
 
-            $sql_dim = "
+            $sql_dim_empresa = "
                 SELECT AVG(cr.valor) AS promedio
                 FROM clima_respuestas cr
                 INNER JOIN clima_reactivos crt ON crt.reactivo_id = cr.reactivo_id
                 INNER JOIN clima_elegibles ce ON ce.periodo_id = cr.periodo_id AND ce.empleado_id = cr.empleado_id
                 WHERE cr.periodo_id = ?
                   AND ce.empresa_id = ?
-                  AND ce.unidad_id = ?
                   AND ce.elegible = 1
                   AND crt.dimension_id = ?
             ";
-            $stmt_d = $pdo->prepare($sql_dim);
-            $stmt_d->execute([$periodo_id, $empresa_id, $mi_unidad_id, $did]);
-            $row_d = $stmt_d->fetch(PDO::FETCH_ASSOC);
-            $prom_dim_1_5 = $row_d ? (float)$row_d['promedio'] : 0.0;
+            $stmt_d_e = $pdo->prepare($sql_dim_empresa);
+            $stmt_d_e->execute([$periodo_id, $empresa_id, $did]);
+            $row_d_e = $stmt_d_e->fetch(PDO::FETCH_ASSOC);
+            $prom_dim_1_5 = $row_d_e ? (float)$row_d_e['promedio'] : 0.0;
             $prom_dim_0_100 = $prom_dim_1_5 > 0 ? (($prom_dim_1_5 - 1) / 4) * 100 : 0.0;
 
-            $promedios_dimensiones[] = array(
+            $promedios_dimensiones_empresa[] = array(
                 'dimension_id' => $did,
                 'dimension_nombre' => $dim['nombre'],
                 'promedio' => round($prom_dim_0_100, 2)
             );
+        }
+    }
+
+    // =======================
+    // RESULTADOS POR UNIDAD (MI UNIDAD)
+    // =======================
+    if ($mi_unidad_id > 0) {
+        $sql_unidad = "
+            SELECT 
+                COUNT(DISTINCT cr.empleado_id) AS total_respondieron,
+                AVG(cr.valor) AS promedio_unidad
+            FROM clima_respuestas cr
+            INNER JOIN clima_elegibles ce ON ce.periodo_id = cr.periodo_id AND ce.empleado_id = cr.empleado_id
+            WHERE cr.periodo_id = ?
+              AND ce.empresa_id = ?
+              AND ce.unidad_id = ?
+              AND ce.elegible = 1
+        ";
+        $stmt_u = $pdo->prepare($sql_unidad);
+        $stmt_u->execute([$periodo_id, $empresa_id, $mi_unidad_id]);
+        $row_u = $stmt_u->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row_u && (int)$row_u['total_respondieron'] > 0) {
+            $prom_1_5 = (float)$row_u['promedio_unidad'];
+            $prom_0_100 = $prom_1_5 > 0 ? (($prom_1_5 - 1) / 4) * 100 : 0.0;
+            
+            $resultados_unidad = array(
+                'total_respondieron' => (int)$row_u['total_respondieron'],
+                'promedio_unidad' => round($prom_0_100, 2)
+            );
+
+            // Promedios por dimensión - Unidad
+            foreach ($dimensiones as $dim) {
+                $did = (int)$dim['dimension_id'];
+
+                $sql_dim_unidad = "
+                    SELECT AVG(cr.valor) AS promedio
+                    FROM clima_respuestas cr
+                    INNER JOIN clima_reactivos crt ON crt.reactivo_id = cr.reactivo_id
+                    INNER JOIN clima_elegibles ce ON ce.periodo_id = cr.periodo_id AND ce.empleado_id = cr.empleado_id
+                    WHERE cr.periodo_id = ?
+                      AND ce.empresa_id = ?
+                      AND ce.unidad_id = ?
+                      AND ce.elegible = 1
+                      AND crt.dimension_id = ?
+                ";
+                $stmt_d_u = $pdo->prepare($sql_dim_unidad);
+                $stmt_d_u->execute([$periodo_id, $empresa_id, $mi_unidad_id, $did]);
+                $row_d_u = $stmt_d_u->fetch(PDO::FETCH_ASSOC);
+                $prom_dim_1_5 = $row_d_u ? (float)$row_d_u['promedio'] : 0.0;
+                $prom_dim_0_100 = $prom_dim_1_5 > 0 ? (($prom_dim_1_5 - 1) / 4) * 100 : 0.0;
+
+                $promedios_dimensiones_unidad[] = array(
+                    'dimension_id' => $did,
+                    'dimension_nombre' => $dim['nombre'],
+                    'promedio' => round($prom_dim_0_100, 2)
+                );
+            }
         }
     }
 }
@@ -207,16 +313,47 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
     </div>
   </div>
 
+  <!-- Información introductoria y metodología -->
+  <div class="alert alert-light border-left-3 border-left-primary mb-3">
+    <div class="d-flex">
+      <i class="icon-heart icon-2x text-primary mr-3"></i>
+      <div>
+        <h5 class="font-weight-bold mb-3">¡Bienvenido! Tu opinión es muy importante para nosotros</h5>
+        
+        <p class="mb-3">
+          <strong>Nuestro Modelo de Clima Organizacional:</strong> FH ha diseñado un modelo para el estudio de su Clima Organizacional, 
+          basado en los modelos de Empresas Internacionales Great Place to Work y Top Companies, fundamentado en el desarrollo e interacción 
+          de cuatro principales relaciones en el lugar de trabajo.
+        </p>
+
+        <h6 class="font-weight-semibold mb-2">Interpretación de Resultados</h6>
+        <p class="mb-2">
+          <strong style="color: #29B6F6;">✓ Resultado Sobresaliente (≥ 85%):</strong> 
+          Se presenta cuando la línea actual sobrepasa el ideal. El clima percibido es óptimo y estos resultados se consideran 
+          <strong>fortalezas del clima del área.</strong>
+        </p>
+        <p class="mb-2">
+          <strong style="color: #66BB6A;">✓ Resultado Satisfactorio (75-84%):</strong> 
+          Se identifica cuando la línea actual está por debajo de 85 y por arriba de 75 puntos. Si la brecha tiende a disminuir, 
+          el clima percibido es <strong>positivo</strong>. De lo contrario, genera evidencia de pérdida de motivación y exige 
+          <strong>mayor atención.</strong>
+        </p>
+        <p class="mb-0">
+          <strong style="color: #EF5350;">⚠ Resultado Deficiente (< 65%):</strong> 
+          Se presenta cuando la línea actual cae por debajo de 65 puntos, indicando una <strong>pérdida de potencial y rendimiento.</strong> 
+          El clima percibido es <strong>negativo</strong> y <strong>requiere atención inmediata.</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
   <?php if (!empty($periodos)): ?>
   <!-- Selector de periodo -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="card-title">Filtrar por periodo</h5>
-    </div>
+  <div class="card mb-3">
     <div class="card-body">
       <form method="get" class="form-inline">
-        <label class="mr-2">Periodo:</label>
-        <select name="periodo_id" class="form-control mr-2" onchange="this.form.submit()">
+        <label class="mr-2 font-weight-semibold">Seleccionar período:</label>
+        <select name="periodo_id" class="form-control" style="width: 150px;" onchange="this.form.submit()">
           <?php foreach ($periodos as $p): ?>
           <option value="<?php echo (int)$p['periodo_id']; ?>" <?php echo ((int)$p['periodo_id'] === $periodo_id) ? 'selected' : ''; ?>>
             <?php echo h($p['anio']); ?>
@@ -227,76 +364,217 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
     </div>
   </div>
 
-  <?php if ($periodo && $resultados): ?>
-
-  <!-- Resumen de mi unidad -->
-  <div class="row">
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <h5 class="font-weight-semibold mb-0">Promedio de Mi Dirección</h5>
-            <span class="text-muted">Periodo <?php echo h($periodo['anio']); ?></span>
-          </div>
-          <div class="svg-center position-relative" id="gauge-mi-unidad" style="height: 150px;"></div>
-          <h2 class="font-weight-bold mt-3 mb-0" style="font-size:3rem;">
-            <?php echo number_format($resultados['promedio_unidad'], 1); ?>%
-          </h2>
-          <span class="text-muted">Escala 0-100</span>
-          <div class="mt-3">
-            <span class="badge badge-light" style="font-size: 1rem;">
-              <i class="icon-users mr-1"></i> <?php echo $resultados['total_respondieron']; ?> personas respondieron
-            </span>
-          </div>
+  <?php if ($periodo): ?>
+  <!-- Datos de la Encuesta -->
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <div class="card bg-light border-left-3 border-left-primary">
+        <div class="card-body text-center p-3">
+          <small class="text-muted d-block text-uppercase">Período de Evaluación</small>
+          <h5 class="font-weight-bold mt-2 mb-0">
+            <?php echo h($periodo['anio']); ?>
+          </h5>
+          <small class="text-muted d-block mt-1">
+            <?php echo $periodo['fecha_inicio'] ? date('d/m/Y', strtotime($periodo['fecha_inicio'])) : 'N/A'; ?>
+            -
+            <?php echo $periodo['fecha_fin'] ? date('d/m/Y', strtotime($periodo['fecha_fin'])) : 'N/A'; ?>
+          </small>
         </div>
       </div>
     </div>
 
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header">
-          <h6 class="card-title font-weight-semibold">Desglose por Dimensión</h6>
+    <div class="col-md-3">
+      <div class="card bg-light border-left-3 border-left-info">
+        <div class="card-body text-center p-3">
+          <small class="text-muted d-block text-uppercase">Universo Aplicable</small>
+          <h3 class="font-weight-bold mt-2 mb-0" style="color: #29B6F6;">
+            <?php echo $datos_encuesta['universo_aplicable']; ?>
+          </h3>
+          <small class="text-muted d-block">empleados elegibles</small>
         </div>
-        <div class="card-body" style="padding: 0;">
-          <div id="chart-dimensiones-mi-unidad" style="height: 300px;"></div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-light border-left-3 border-left-success">
+        <div class="card-body text-center p-3">
+          <small class="text-muted d-block text-uppercase">Encuestas Respondidas</small>
+          <h3 class="font-weight-bold mt-2 mb-0" style="color: #66BB6A;">
+            <?php echo $datos_encuesta['encuestas_respondidas']; ?>
+          </h3>
+          <small class="text-muted d-block">respuestas recibidas</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-light border-left-3" style="border-left-color: <?php 
+        $pct = $datos_encuesta['porcentaje_participacion'];
+        echo ($pct >= 90) ? '#29B6F6' : (($pct >= 70) ? '#66BB6A' : (($pct >= 50) ? '#FFA726' : '#EF5350'));
+      ?> !important;">
+        <div class="card-body text-center p-3">
+          <small class="text-muted d-block text-uppercase">% Participación</small>
+          <h3 class="font-weight-bold mt-2 mb-0" style="color: <?php 
+            $pct = $datos_encuesta['porcentaje_participacion'];
+            echo ($pct >= 90) ? '#29B6F6' : (($pct >= 70) ? '#66BB6A' : (($pct >= 50) ? '#FFA726' : '#EF5350'));
+          ?>;">
+            <?php echo number_format($datos_encuesta['porcentaje_participacion'], 1); ?>%
+          </h3>
+          <small class="text-muted d-block">
+            <?php 
+              $pct = $datos_encuesta['porcentaje_participacion'];
+              if ($pct >= 90) echo '✓ Excelente';
+              elseif ($pct >= 70) echo '✓ Bueno';
+              elseif ($pct >= 50) echo '⚠ Regular';
+              else echo '✗ Bajo';
+            ?>
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php if ($periodo && $resultados_empresa): ?>
+
+  <!-- ======================== RESULTADOS EMPRESA VS ÁREA ======================== -->
+  <div style="margin-bottom: 30px;">
+    <h5 class="mb-3 font-weight-semibold">
+      <i class="icon-chart"></i> Comparativa: Empresa vs Mi Área
+    </h5>
+
+    <!-- Resumen comparativo -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card border-left-3 border-left-info">
+          <div class="card-body text-center pb-2">
+            <small class="text-muted d-block mb-2">PROMEDIO DE LA EMPRESA</small>
+            <h2 class="font-weight-bold mb-0" style="font-size: 2.5rem; color: #29B6F6;">
+              <?php echo number_format($resultados_empresa['promedio_empresa'], 1); ?>%
+            </h2>
+            <small class="text-muted d-block">
+              <i class="icon-users"></i> <?php echo $resultados_empresa['total_respondieron']; ?> respondentes
+            </small>
+            <div id="gauge-empresa" style="height: 120px; margin-top: 10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <?php if ($resultados_unidad): ?>
+      <div class="col-lg-6">
+        <div class="card border-left-3 border-left-success">
+          <div class="card-body text-center pb-2">
+            <small class="text-muted d-block mb-2">MI ÁREA: <?php echo h(strtoupper($mi_empleado['unidad_nombre'])); ?></small>
+            <h2 class="font-weight-bold mb-0" style="font-size: 2.5rem; color: #66BB6A;">
+              <?php echo number_format($resultados_unidad['promedio_unidad'], 1); ?>%
+            </h2>
+            <small class="text-muted d-block">
+              <i class="icon-users"></i> <?php echo $resultados_unidad['total_respondieron']; ?> respondentes
+            </small>
+            <div id="gauge-unidad" style="height: 120px; margin-top: 10px;"></div>
+          </div>
+        </div>
+      </div>
+      <?php else: ?>
+      <div class="col-lg-6">
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <small class="text-muted d-block mb-2">MI ÁREA</small>
+            <p class="text-muted mb-0">Datos insuficientes</p>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Gráfico comparativo por dimensiones -->
+    <div class="card mt-3">
+      <div class="card-body" style="padding: 15px;">
+        <h6 class="font-weight-semibold mb-3">Resultados por Dimensión</h6>
+        <div id="chart-comparativa" style="height: 280px;"></div>
+      </div>
+    </div>
+
+    <!-- Detalle tabla -->
+    <div class="card mt-3">
+      <div class="card-body" style="padding: 15px;">
+        <div class="table-responsive">
+          <table class="table table-sm table-borderless mb-0">
+            <thead style="background-color: #f8f9fa;">
+              <tr>
+                <th style="width: 40%;">Dimensión</th>
+                <th class="text-center" style="width: 20%;">Empresa</th>
+                <th class="text-center" style="width: 20%;">Mi Área</th>
+                <th class="text-center" style="width: 20%;">Diferencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php 
+              $dim_empresa_map = array();
+              foreach ($promedios_dimensiones_empresa as $d) {
+                $dim_empresa_map[$d['dimension_id']] = $d;
+              }
+              
+              $dim_area_map = array();
+              foreach ($promedios_dimensiones_unidad as $d) {
+                $dim_area_map[$d['dimension_id']] = $d;
+              }
+
+              // Mostrar todas las dimensiones
+              $all_dims = array_unique(array_merge(array_keys($dim_empresa_map), array_keys($dim_area_map)));
+              sort($all_dims);
+
+              foreach ($all_dims as $dim_id):
+                $empresa_data = isset($dim_empresa_map[$dim_id]) ? $dim_empresa_map[$dim_id] : null;
+                $area_data = isset($dim_area_map[$dim_id]) ? $dim_area_map[$dim_id] : null;
+                
+                $emp_val = $empresa_data ? $empresa_data['promedio'] : 0;
+                $area_val = $area_data ? $area_data['promedio'] : 0;
+                $diff = $area_val - $emp_val;
+                
+                $dim_nombre = $empresa_data ? $empresa_data['dimension_nombre'] : ($area_data ? $area_data['dimension_nombre'] : 'N/A');
+              ?>
+              <tr>
+                <td class="font-weight-500"><?php echo h($dim_nombre); ?></td>
+                <td class="text-center">
+                  <span class="badge" style="background-color: <?php echo $emp_val >= 70 ? '#29B6F6' : ($emp_val >= 50 ? '#66BB6A' : ($emp_val >= 30 ? '#FFA726' : '#EF5350')); ?>; color: white;">
+                    <?php echo number_format($emp_val, 1); ?>%
+                  </span>
+                </td>
+                <td class="text-center">
+                  <?php if ($area_val > 0): ?>
+                  <span class="badge" style="background-color: <?php echo $area_val >= 70 ? '#29B6F6' : ($area_val >= 50 ? '#66BB6A' : ($area_val >= 30 ? '#FFA726' : '#EF5350')); ?>; color: white;">
+                    <?php echo number_format($area_val, 1); ?>%
+                  </span>
+                  <?php else: ?>
+                  <span class="text-muted">—</span>
+                  <?php endif; ?>
+                </td>
+                <td class="text-center">
+                  <?php if ($area_val > 0): ?>
+                    <?php if ($diff > 0): ?>
+                      <span class="text-success font-weight-600">+<?php echo number_format($diff, 1); ?>%</span>
+                    <?php elseif ($diff < 0): ?>
+                      <span class="text-danger font-weight-600"><?php echo number_format($diff, 1); ?>%</span>
+                    <?php else: ?>
+                      <span class="text-muted">=</span>
+                    <?php endif; ?>
+                  <?php else: ?>
+                    <span class="text-muted">—</span>
+                  <?php endif; ?>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Detalle por dimensión -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="card-title">Resultados Detallados por Dimensión</h5>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <?php foreach ($promedios_dimensiones as $d): 
-          $prom_dim = (float)$d['promedio'];
-          $color_dim = '#EF5350';
-          if ($prom_dim >= 70) $color_dim = '#29B6F6';
-          elseif ($prom_dim >= 50) $color_dim = '#66BB6A';
-          elseif ($prom_dim >= 30) $color_dim = '#FFA726';
-        ?>
-        <div class="col-md-4 col-sm-6 mb-3">
-          <div class="card" style="border-left: 4px solid <?php echo $color_dim; ?>;">
-            <div class="card-body">
-              <h6 class="font-weight-semibold mb-2"><?php echo h($d['dimension_nombre']); ?></h6>
-              <h3 class="mb-0" style="color: <?php echo $color_dim; ?>;">
-                <?php echo number_format($d['promedio'], 1); ?>%
-              </h3>
-            </div>
-          </div>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  </div>
-
-  <div class="alert alert-info">
-    <i class="icon-info22 mr-2"></i>
-    <strong>Nota:</strong> Estos resultados reflejan la percepción del clima laboral de tu Dirección en el periodo seleccionado. 
-    Los datos individuales son confidenciales y no se comparten.
+  <?php elseif ($periodo): ?>
+  <div class="alert alert-warning">
+    <strong>Sin respuestas:</strong> La empresa aún no tiene respuestas suficientes para mostrar resultados en este periodo.
   </div>
 
   <?php elseif ($periodo): ?>
@@ -332,22 +610,23 @@ require_once __DIR__ . '/../includes/layout/content_close.php';
 <script>
 $(document).ready(function() {
   
-<?php if ($periodo && $resultados): ?>
-  // Gauge de mi unidad
-  var promedioMiUnidad = <?php echo (float)$resultados['promedio_unidad']; ?>;
-  if (document.getElementById('gauge-mi-unidad')) {
-    var gaugeMiUnidad = echarts.init(document.getElementById('gauge-mi-unidad'));
-    var optionGauge = {
+<?php if ($periodo && $resultados_empresa): ?>
+
+  // ======================== GAUGE EMPRESA ========================
+  var promedioEmpresa = <?php echo (float)$resultados_empresa['promedio_empresa']; ?>;
+  if (document.getElementById('gauge-empresa')) {
+    var gaugeEmpresa = echarts.init(document.getElementById('gauge-empresa'));
+    var optionGaugeEmpresa = {
       series: [{
         type: 'gauge',
-        startAngle: 180,
-        endAngle: 0,
+        startAngle: 200,
+        endAngle: -20,
         min: 0,
         max: 100,
-        splitNumber: 5,
+        splitNumber: 4,
         axisLine: {
           lineStyle: {
-            width: 12,
+            width: 10,
             color: [
               [0.3, '#EF5350'],
               [0.5, '#FFA726'],
@@ -361,68 +640,154 @@ $(document).ready(function() {
         splitLine: { show: false },
         axisLabel: { show: false },
         detail: { show: false },
-        data: [{ value: promedioMiUnidad.toFixed(1) }]
+        data: [{ value: promedioEmpresa.toFixed(1) }]
       }]
     };
-    gaugeMiUnidad.setOption(optionGauge);
+    gaugeEmpresa.setOption(optionGaugeEmpresa);
   }
 
-  // Gráfico de dimensiones
-  if (document.getElementById('chart-dimensiones-mi-unidad')) {
-    var chartDim = echarts.init(document.getElementById('chart-dimensiones-mi-unidad'));
-    var optionDim = {
+<?php endif; ?>
+
+<?php if ($periodo && $resultados_unidad): ?>
+
+  // ======================== GAUGE UNIDAD ========================
+  var promedioUnidad = <?php echo (float)$resultados_unidad['promedio_unidad']; ?>;
+  if (document.getElementById('gauge-unidad')) {
+    var gaugeUnidad = echarts.init(document.getElementById('gauge-unidad'));
+    var optionGaugeUnidad = {
+      series: [{
+        type: 'gauge',
+        startAngle: 200,
+        endAngle: -20,
+        min: 0,
+        max: 100,
+        splitNumber: 4,
+        axisLine: {
+          lineStyle: {
+            width: 10,
+            color: [
+              [0.3, '#EF5350'],
+              [0.5, '#FFA726'],
+              [0.7, '#66BB6A'],
+              [1, '#29B6F6']
+            ]
+          }
+        },
+        pointer: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: { show: false },
+        detail: { show: false },
+        data: [{ value: promedioUnidad.toFixed(1) }]
+      }]
+    };
+    gaugeUnidad.setOption(optionGaugeUnidad);
+  }
+
+<?php endif; ?>
+
+<?php if ($periodo && $resultados_empresa): ?>
+
+  // ======================== GRÁFICO COMPARATIVO ========================
+  if (document.getElementById('chart-comparativa')) {
+    var chartComparativa = echarts.init(document.getElementById('chart-comparativa'));
+    
+    // Construir datos para el gráfico
+    var datosEmpresa = [];
+    var datosArea = [];
+    var labels = [];
+    
+    <?php 
+    $dim_empresa_map = array();
+    foreach ($promedios_dimensiones_empresa as $d) {
+      $dim_empresa_map[$d['dimension_id']] = $d;
+    }
+    
+    $dim_area_map = array();
+    foreach ($promedios_dimensiones_unidad as $d) {
+      $dim_area_map[$d['dimension_id']] = $d;
+    }
+
+    $all_dims = array_unique(array_merge(array_keys($dim_empresa_map), array_keys($dim_area_map)));
+    sort($all_dims);
+    ?>
+    
+    <?php foreach ($all_dims as $dim_id):
+      $empresa_data = isset($dim_empresa_map[$dim_id]) ? $dim_empresa_map[$dim_id] : null;
+      $area_data = isset($dim_area_map[$dim_id]) ? $dim_area_map[$dim_id] : null;
+    ?>
+    labels.push('<?php echo addslashes($empresa_data ? $empresa_data['dimension_nombre'] : ($area_data ? $area_data['dimension_nombre'] : '')); ?>');
+    datosEmpresa.push(<?php echo $empresa_data ? $empresa_data['promedio'] : 0; ?>);
+    datosArea.push(<?php echo $area_data ? $area_data['promedio'] : 0; ?>);
+    <?php endforeach; ?>
+    
+    var optionComparativa = {
       grid: {
         left: '5%',
         right: '5%',
-        bottom: '5%',
+        bottom: '10%',
         top: '5%',
         containLabel: true
+      },
+      legend: {
+        data: ['Empresa', 'Mi Área'],
+        bottom: 0,
+        textStyle: { fontSize: 11 }
       },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
         formatter: function(params) {
-          return params[0].name + ': ' + params[0].value.toFixed(1) + '%';
+          var str = params[0].name + '<br/>';
+          for (var i = 0; i < params.length; i++) {
+            str += params[i].seriesName + ': ' + params[i].value.toFixed(1) + '%<br/>';
+          }
+          return str;
         }
       },
       xAxis: {
+        type: 'category',
+        data: labels,
+        axisLabel: {
+          interval: 0,
+          fontSize: 9,
+          rotate: 45
+        }
+      },
+      yAxis: {
         type: 'value',
         min: 0,
         max: 100,
         axisLabel: {
-          formatter: '{value}%'
+          formatter: '{value}%',
+          fontSize: 9
         }
       },
-      yAxis: {
-        type: 'category',
-        data: <?php echo json_encode(array_map(function($d) { return $d['dimension_nombre']; }, $promedios_dimensiones), JSON_UNESCAPED_UNICODE); ?>,
-        axisLabel: {
-          interval: 0,
-          fontSize: 10
-        }
-      },
-      series: [{
-        type: 'bar',
-        data: <?php echo json_encode(array_map(function($d) { return $d['promedio']; }, $promedios_dimensiones)); ?>,
-        itemStyle: {
-          color: function(params) {
-            var val = params.value;
-            if (val < 30) return '#EF5350';
-            if (val < 50) return '#FFA726';
-            if (val < 70) return '#66BB6A';
-            return '#29B6F6';
+      series: [
+        {
+          name: 'Empresa',
+          type: 'bar',
+          data: datosEmpresa,
+          itemStyle: { color: '#29B6F6' },
+          barWidth: '40%',
+          label: {
+            show: false
           }
         },
-        label: {
-          show: true,
-          position: 'right',
-          formatter: '{c}%',
-          fontSize: 10
+        {
+          name: 'Mi Área',
+          type: 'bar',
+          data: datosArea,
+          itemStyle: { color: '#66BB6A' },
+          label: {
+            show: false
+          }
         }
-      }]
+      ]
     };
-    chartDim.setOption(optionDim);
+    chartComparativa.setOption(optionComparativa);
   }
+
 <?php endif; ?>
 
 });

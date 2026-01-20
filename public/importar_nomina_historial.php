@@ -69,7 +69,7 @@ if ($import_id_sel > 0) {
             <div class="alert alert-info">No hay importaciones registradas.</div>
           <?php else: ?>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-              <table class="table table-striped table-hover table-sm">
+              <table class="table table-sm">
                 <thead style="position: sticky; top: 0; background-color: #fff; z-index: 10;">
                   <tr>
                     <th>ID</th>
@@ -145,7 +145,7 @@ if ($import_id_sel > 0) {
             </div>
 
             <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-              <table class="table table-sm table-striped table-bordered" id="tabla-detalle">
+              <table class="table table-sm table-bordered" id="tabla-detalle">
                 <thead style="position: sticky; top: 0; background-color: #fff; z-index: 10;">
                   <tr>
                     <th style="min-width: 80px;">No. Emp</th>

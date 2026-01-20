@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../permisos.php';
+require_once __DIR__ . '/../conexion.php';
 
 // includes/layout/sidebar.php
 if (!isset($active_menu)) { $active_menu = ''; }
@@ -11,6 +12,17 @@ function is_active($key, $active_menu) {
 // Sin ?? (compatibilidad)
 $nombre_usuario = (isset($_SESSION['nombre_usuario']) && $_SESSION['nombre_usuario'] !== '') ? $_SESSION['nombre_usuario'] : 'Usuario';
 $rol_nombre = (isset($_SESSION['rol_nombre']) && $_SESSION['rol_nombre'] !== '') ? $_SESSION['rol_nombre'] : '';
+
+// Obtener estado del sidebar desde la BD
+$sidebar_class = '';
+if (isset($_SESSION['usuario_id'])) {
+  $stmt = $pdo->prepare("SELECT sidebar_state FROM usuarios WHERE usuario_id = ? LIMIT 1");
+  $stmt->execute([(int)$_SESSION['usuario_id']]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if ($row && $row['sidebar_state'] === 'resized') {
+    $sidebar_class = ' sidebar-main-resized';
+  }
+}
 
 // Foto: storage -> se sirve por ver_foto_empleado.php
 $empleado_id = isset($_SESSION['empleado_id']) ? (int)$_SESSION['empleado_id'] : 0;
@@ -26,8 +38,12 @@ $admin_active = in_array($active_menu, [
   'admin_org_adscripciones',
   'admin_org_puestos',
   'admin_org_centros_trabajo',
+  'admin_org_plantilla',
+  'admin_documentos',
   'clima_admin'
 ], true);
+
+$plantilla_active = ($active_menu === 'plantilla');
 
 $clima_user_active = in_array($active_menu, [
   'clima',
@@ -40,7 +56,8 @@ $clima_user_active = in_array($active_menu, [
 <div class="page-content">
 
   <!-- Main sidebar -->
-  <div class="sidebar sidebar-dark sidebar-main sidebar-expand-lg">
+  <div class="sidebar sidebar-dark sidebar-main sidebar-expand-lg<?php echo $sidebar_class; ?>">
+    
     <div class="sidebar-content">
 
       <!-- User menu (opcional) -->
@@ -150,6 +167,14 @@ $clima_user_active = in_array($active_menu, [
           </li>
           <?php endif; ?>
 
+          <?php if (can('plantilla.ver') || can('plantilla.admin')): ?>
+          <li class="nav-item">
+            <a href="<?php echo ASSET_BASE; ?>public/plantilla.php" class="nav-link <?php echo is_active('plantilla', $active_menu); ?>">
+              <i class="icon-table2"></i><span>Plantilla Autorizada</span>
+            </a>
+          </li>
+          <?php endif; ?>
+
           <?php if (can('usuarios.admin') || can('organizacion.admin')): ?>
           <li class="nav-item nav-item-submenu <?php echo $admin_active ? 'nav-item-expanded nav-item-open' : ''; ?>">
             <a href="#" class="nav-link <?php echo $admin_active ? 'active' : ''; ?>">
@@ -203,8 +228,24 @@ $clima_user_active = in_array($active_menu, [
                 </a>
               </li>
 
+              <li class="nav-item">
+                <a href="<?php echo ASSET_BASE; ?>public/admin_org_plantilla.php"
+                  class="nav-link <?php echo is_active('admin_org_plantilla', $active_menu); ?>">
+                  Plantilla Autorizada (Admin)
+                </a>
+              </li>
+
               <li class="nav-item-divider"></li>
 
+              <?php endif; ?>
+
+              <?php if (can('admin.documentos')): ?>
+              <li class="nav-item">
+                <a href="<?php echo ASSET_BASE; ?>public/admin_documentos.php"
+                  class="nav-link <?php echo is_active('admin_documentos', $active_menu); ?>">
+                  <i class="icon-book mr-2"></i>Documentos y Manuales
+                </a>
+              </li>
               <?php endif; ?>
 
               <?php if (can('organizacion.admin') || can('clima.admin')): ?>

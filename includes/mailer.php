@@ -7,7 +7,7 @@ use PHPMailer\PHPMailer\Exception;
 
 function enviar_correo($to, $subject, $html) {
     
-    // En DEV: guardar en archivo para depuración
+    // En DEV: guardar en archivo para depuración Y también enviar
     if (defined('APP_ENV') && APP_ENV === 'dev') {
         $baseDir = realpath(__DIR__ . '/..');
         $dir = $baseDir . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'mails';
@@ -26,8 +26,8 @@ function enviar_correo($to, $subject, $html) {
         $ok = @file_put_contents($file, $content);
         @error_log('[SGRH][mailer] Guardado en: ' . $file);
         
-        // En DEV: solo guardamos, no enviamos correo real
-        return (bool)$ok;
+        // También intentar enviar por SMTP en DEV
+        return enviar_por_smtp($to, $subject, $html);
     }
     
     // En PROD: enviar por SMTP
@@ -38,15 +38,12 @@ function enviar_por_smtp($to, $subject, $html) {
     try {
         $mail = new PHPMailer(true);
         
-        // Configuración SMTP para GoDaddy
-        $mail->isSMTP();
+        // Configuración SMTP para GoDaddy Relay
+        // IMPORTANTE: NO usar isSMTP() para GoDaddy
         $mail->Host = SMTP_HOST;
         $mail->Port = SMTP_PORT;
-        $mail->SMTPAuth = false; // GoDaddy no requiere autenticación
-        $mail->SMTPSecure = SMTP_SECURE; // Vacío para GoDaddy
-        
-        // Timeouts más cortos para evitar largos tiempos de espera
-        $mail->Timeout = 10;
+        $mail->SMTPAuth = false; // GoDaddy Relay NO requiere autenticación
+        $mail->SMTPSecure = SMTP_SECURE ?: ''; // Vacío para GoDaddy Relay
         
         // Configuración de lenguaje
         $mail->CharSet = 'UTF-8';
@@ -63,19 +60,22 @@ function enviar_por_smtp($to, $subject, $html) {
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body = $html;
-        $mail->AltBody = strip_tags($html); // Versión de texto plano
+        $mail->AltBody = strip_tags($html);
         
-        // Debug mode (0=sin debug, 1=errores, 2=detallado)
-        $mail->SMTPDebug = 2; // Activado temporalmente
+        // Debug
+        $mail->SMTPDebug = 2;
         $mail->Debugoutput = function($str, $level) {
             error_log("[SGRH][PHPMailer] $str");
         };
         
         // Enviar
-        return $mail->send();
+        $result = $mail->send();
+        error_log('[SGRH][mailer] Resultado: ' . ($result ? 'ÉXITO' : 'FALLO'));
+        return $result;
         
     } catch (Exception $e) {
         @error_log('[SGRH][mailer] Error: ' . $e->getMessage());
+        @error_log('[SGRH][mailer] ErrorInfo: ' . ($mail->ErrorInfo ?? 'N/A'));
         return false;
     }
 }

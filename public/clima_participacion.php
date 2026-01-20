@@ -340,6 +340,10 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
                 <?php endif; ?>
               </td>
               <td>
+                <a href="clima_elegibles_detalle.php?periodo_id=<?= (int)$periodo_id ?>&unidad_id=<?= (int)$d['unidad_id'] ?>" class="btn btn-info btn-sm mr-1" title="Ver detalle de elegibles">
+                  <i class="icon-list2 mr-1"></i> Detalle
+                </a>
+
                 <form method="post" class="d-inline">
                   <input type="hidden" name="csrf_token" value="<?=h($_SESSION['csrf_token'])?>">
                   <input type="hidden" name="action" value="toggle_publicacion">
@@ -390,14 +394,7 @@ require_once __DIR__ . '/../includes/layout/scripts.php';
   if (typeof $ !== 'undefined' && $.fn.DataTable) {
     $('#tbl_part').DataTable({
       autoWidth: false,
-      order: [[0,'asc']],
-      language: {
-        search: "Buscar:",
-        lengthMenu: "Mostrar _MENU_",
-        info: "Mostrando _START_ a _END_ de _TOTAL_",
-        paginate: { first:"Primero", last:"Último", next:"Siguiente", previous:"Anterior" },
-        zeroRecords: "Sin registros"
-      }
+      order: [[0,'asc']]
     });
   }
 })();

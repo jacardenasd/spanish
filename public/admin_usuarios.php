@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/guard.php';
 require_once __DIR__ . '/../includes/permisos.php';
+require_once __DIR__ . '/../includes/permisos_config.php';
 require_once __DIR__ . '/../includes/conexion.php';
 
 require_login();
@@ -227,6 +228,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 bitacora('admin_usuarios', 'update_roles', ['usuario_id' => $usuario_id_post, 'roles' => $roles_sel]);
                 $flash = 'Roles actualizados.';
+            } elseif ($action === 'update_permisos_usuario') {
+                $permisos_sel = isset($_POST['permisos']) && is_array($_POST['permisos']) ? $_POST['permisos'] : [];
+                $unidades_sel = isset($_POST['unidades_permitidas']) && is_array($_POST['unidades_permitidas']) ? array_map('intval', $_POST['unidades_permitidas']) : [];
+
+                // Limpiar permisos actuales del usuario (tabla: usuario_permisos_directos si existe, o crear lógica)
+                // Por simplicidad, guardaremos en una tabla nueva o en un campo JSON en usuarios
+                
+                // Opción 1: Guardar en campo JSON en tabla usuarios
+                $permisos_data = [
+                    'permisos' => $permisos_sel,
+                    'unidades' => $unidades_sel
+                ];
+                
+                $update = $pdo->prepare("UPDATE usuarios SET permisos_especiales = :permisos WHERE usuario_id = :uid AND empresa_id = :eid");
+                $update->execute([
+                    ':permisos' => json_encode($permisos_data, JSON_UNESCAPED_UNICODE),
+                    ':uid' => $usuario_id_post,
+                    ':eid' => $empresa_id
+                ]);
+
+                bitacora('admin_usuarios', 'update_permisos', ['usuario_id' => $usuario_id_post, 'permisos' => $permisos_sel, 'unidades' => $unidades_sel]);
+                $flash = 'Permisos actualizados correctamente.';
             } else {
                 $flash = 'Acción no reconocida.';
                 $flash_type = 'warning';
@@ -252,6 +275,14 @@ $f_solo_asignados = isset($_GET['solo_asignados']) ? (int)$_GET['solo_asignados'
 // Roles list
 $roles_stmt = $pdo->query("SELECT rol_id, nombre FROM roles WHERE estatus = 1 ORDER BY rol_id");
 $roles_list = $roles_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Obtener permisos disponibles del sistema
+$permisos_disponibles = get_permisos_disponibles();
+
+// Obtener unidades para filtros
+$unidades_stmt = $pdo->prepare("SELECT unidad_id, nombre FROM org_unidades WHERE empresa_id = :empresa_id AND estatus = 1 ORDER BY nombre");
+$unidades_stmt->execute([':empresa_id' => $empresa_id]);
+$unidades_lista = $unidades_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Users list
 $where = [];
@@ -345,31 +376,6 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
     </div>
     <div class="breadcrumb-line breadcrumb-line-light header-elements-lg-inline">
         <div class="d-flex">
-            <div class="breadcrumb">
-                <a href="<?php echo ASSET_BASE; ?>public/dashboard.php" class="breadcrumb-item">
-                    <i class="icon-home2 mr-2"></i> Inicio
-                </a>
-                <span class="breadcrumb-item">Administración</span>
-                <span class="breadcrumb-item active">Usuarios</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="content">
-
-    <?php if ($flash): ?>
-        <div class="alert alert-<?php echo h($flash_type); ?> alert-styled-left alert-dismissible">
-            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-            <?php echo h($flash); ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="card">
-        <div class="card-header header-elements-inline">
-            <h5 class="card-title">Filtros</h5>
-        </div>
-        <div class="card-body">
             <form method="get" action="" class="row">
                 <div class="col-md-4">
                     <label>Búsqueda</label>
@@ -498,7 +504,15 @@ require_once __DIR__ . '/../includes/layout/content_open.php';
                                             data-user-name="<?php echo h($nombre); ?>"
                                             data-role-ids="<?php echo h($u['roles_ids']); ?>"
                                             title="Asignar/Quitar roles">
-                                      <i class="icon-list2"></i>
+                                      <i class="icon-list2"></i> Roles
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-info btn-sm mr-1 btn-permisos"
+                                            data-user-id="<?php echo (int)$u['usuario_id']; ?>"
+                                            data-user-name="<?php echo h($nombre); ?>"
+                                            title="Gestionar permisos específicos">
+                                      <i class="icon-key"></i> Permisos
                                     </button>
 
                                     <form method="post" action="" class="mr-1">
@@ -530,7 +544,7 @@ require_once __DIR__ . '/../includes/layout/content_close.php';
 ?>
 
 <!-- Modal: Roles de usuario -->
-<div id="modal_roles" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+<div id="modal_roles" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" style="display:none;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="post" action="">
@@ -567,22 +581,93 @@ require_once __DIR__ . '/../includes/layout/content_close.php';
     </div>
 </div>
 
+<!-- Modal: Permisos de usuario -->
+<div id="modal_permisos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" style="display:none;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="" id="form_permisos">
+                <input type="hidden" name="csrf_token" value="<?php echo h($csrf_token); ?>">
+                <input type="hidden" name="action" value="update_permisos_usuario">
+                <input type="hidden" name="usuario_id" id="permisos_usuario_id" value="">
+
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">Permisos de <span id="permisos_usuario_nombre" class="font-weight-semibold"></span></h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="icon-info22 mr-2"></i>
+                        Los permisos específicos se suman a los permisos heredados de los roles asignados.
+                    </div>
+
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <?php foreach ($permisos_disponibles as $modulo => $permisos): ?>
+                        <div class="card mb-2">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 font-weight-semibold text-uppercase"><?php echo h($modulo); ?></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <?php foreach ($permisos as $clave => $descripcion): ?>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <label class="form-check-label">
+                                                <input type="checkbox" class="form-check-input" name="permisos[]" value="<?php echo h($clave); ?>">
+                                                <strong><?php echo h(str_replace($modulo . '.', '', $clave)); ?></strong>
+                                            </label>
+                                            <div class="form-text text-muted ml-4 small"><?php echo h($descripcion); ?></div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label class="font-weight-semibold">Filtrar por Unidades <span class="text-muted">(opcional)</span></label>
+                        <select name="unidades_permitidas[]" id="permisos_unidades" class="form-control" multiple size="5">
+                            <?php foreach ($unidades_lista as $unidad): ?>
+                                <option value="<?php echo (int)$unidad['unidad_id']; ?>"><?php echo h($unidad['nombre']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">
+                            Si no selecciona ninguna, podrá ver todas las unidades de su empresa.
+                            Mantén presionada la tecla Ctrl (Cmd en Mac) para seleccionar múltiples.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info">Guardar permisos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
   $(function(){
     if ($.fn.DataTable) {
       $('#tabla_usuarios').DataTable({
-        pageLength: 25,
-        order: [],
-        language: {
-          search: 'Buscar:',
-          lengthMenu: 'Mostrar _MENU_',
-          info: 'Mostrando _START_ a _END_ de _TOTAL_',
-          paginate: { previous: 'Anterior', next: 'Siguiente' },
-          zeroRecords: 'No se encontraron registros',
-          infoEmpty: 'Sin registros'
+      pageLength: 25,
+      order: [],
+      language: {
+        search: 'Buscar:',
+        lengthMenu: 'Mostrar _MENU_',
+        info: 'Mostrando _START_ a _END_ de _TOTAL_',
+        paginate: { previous: 'Anterior', next: 'Siguiente' },
+        zeroRecords: 'No se encontraron registros',
+        infoEmpty: 'Sin registros'
         }
       });
     }
+
+                // Asegurar que los modales arranquen ocultos
+                $('#modal_roles, #modal_permisos').modal({ show: false });
 
         // Abrir modal de roles
         $(document).on('click', '.btn-roles', function(){
@@ -600,6 +685,42 @@ require_once __DIR__ . '/../includes/layout/content_close.php';
             });
 
             $('#modal_roles').modal('show');
+        });
+
+        // Abrir modal de permisos
+        $(document).on('click', '.btn-permisos', function(){
+            var uid = $(this).data('user-id');
+            var uname = $(this).data('user-name');
+
+            $('#permisos_usuario_id').val(uid);
+            $('#permisos_usuario_nombre').text(uname);
+
+            // Resetear checkboxes y select
+            $('#form_permisos input[type="checkbox"]').prop('checked', false);
+            $('#permisos_unidades').val([]);
+
+            // Cargar permisos actuales del usuario via AJAX
+            $.ajax({
+                url: 'ajax_get_usuario_permisos.php',
+                method: 'GET',
+                data: { usuario_id: uid },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.permisos && Array.isArray(data.permisos)) {
+                        data.permisos.forEach(function(perm) {
+                            $('#form_permisos input[value="' + perm + '"]').prop('checked', true);
+                        });
+                    }
+                    if (data.unidades && Array.isArray(data.unidades)) {
+                        $('#permisos_unidades').val(data.unidades);
+                    }
+                },
+                error: function() {
+                    console.log('No se pudieron cargar los permisos actuales');
+                }
+            });
+
+            $('#modal_permisos').modal('show');
         });
   });
 </script>

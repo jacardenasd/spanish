@@ -25,7 +25,19 @@ if (!isset($extra_css)) { $extra_css = []; }
 	<script src="<?php echo ASSET_BASE; ?>global_assets/js/main/bootstrap.bundle.min.js"></script>
 	<!-- /core JS files -->
 
+	<!-- Variables globales -->
+	<script>
+		window.ASSET_BASE = '<?php echo ASSET_BASE; ?>';
+	</script>
+	<!-- /variables globales -->
+
+	<!-- DataTables config (debe cargarse antes que cualquier DataTable) -->
+	<script src="<?php echo ASSET_BASE; ?>global_assets/js/datatable_config.js"></script>
+	<!-- /DataTables config -->
+
 	<!-- Theme JS files -->
+	<script src="<?php echo ASSET_BASE; ?>global_assets/js/plugins/ui/moment/moment.min.js"></script>
+	<script src="<?php echo ASSET_BASE; ?>global_assets/js/plugins/pickers/daterangepicker.js"></script>
 	<script src="<?php echo ASSET_BASE; ?>assets/js/app.js"></script>
 	<!-- /theme JS files -->
 

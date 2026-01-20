@@ -267,7 +267,7 @@ if (!empty($_GET['export']) && $_GET['export'] == '1') {
     </div>
 
     <div class="table-responsive">
-      <table class="table table-striped table-hover" id="tabla_ads">
+      <table class="table" id="tabla_ads">
         <thead>
           <tr>
             <th>ID</th>
